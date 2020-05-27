@@ -32,7 +32,7 @@ public final class LazilyInstantiate<T> implements Supplier<T> {
 
 	private LazilyInstantiate(Supplier<T> supplier) {
 		this.supplier = supplier;
-		this.current = () -> swapper();
+		this.current = this::swapper;
 	}
 
 	public static <T> LazilyInstantiate<T> using(Supplier<T> supplier) {

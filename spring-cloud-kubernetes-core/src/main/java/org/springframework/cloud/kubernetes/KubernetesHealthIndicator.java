@@ -17,11 +17,11 @@
 package org.springframework.cloud.kubernetes;
 
 import io.fabric8.kubernetes.api.model.Pod;
-
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 
 /**
+ * Kubernetes 健康检查
  * Kubernetes implementation of {@link AbstractHealthIndicator}.
  *
  * @author Ioannis Canellos
@@ -38,23 +38,22 @@ public class KubernetesHealthIndicator extends AbstractHealthIndicator {
 	@Override
 	protected void doHealthCheck(Health.Builder builder) throws Exception {
 		try {
+			// 获取 pod
 			Pod current = this.utils.currentPod().get();
 			if (current != null) {
-				builder.up().withDetail("inside", true)
-						.withDetail("namespace", current.getMetadata().getNamespace())
-						.withDetail("podName", current.getMetadata().getName())
-						.withDetail("podIp", current.getStatus().getPodIP())
-						.withDetail("serviceAccount",
-								current.getSpec().getServiceAccountName())
-						.withDetail("nodeName", current.getSpec().getNodeName())
-						.withDetail("hostIp", current.getStatus().getHostIP())
-						.withDetail("labels", current.getMetadata().getLabels());
-			}
-			else {
+				builder.up()
+				       .withDetail("inside", true)
+				       .withDetail("namespace", current.getMetadata().getNamespace())
+				       .withDetail("podName", current.getMetadata().getName())
+				       .withDetail("podIp", current.getStatus().getPodIP())
+				       .withDetail("serviceAccount", current.getSpec().getServiceAccountName())
+				       .withDetail("nodeName", current.getSpec().getNodeName())
+				       .withDetail("hostIp", current.getStatus().getHostIP())
+				       .withDetail("labels", current.getMetadata().getLabels());
+			} else {
 				builder.up().withDetail("inside", false);
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			builder.down(e);
 		}
 	}

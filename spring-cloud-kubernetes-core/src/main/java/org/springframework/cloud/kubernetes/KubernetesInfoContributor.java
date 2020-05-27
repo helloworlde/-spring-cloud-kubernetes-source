@@ -16,17 +16,17 @@
 
 package org.springframework.cloud.kubernetes;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import io.fabric8.kubernetes.api.model.Pod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.boot.actuate.info.Info.Builder;
 import org.springframework.boot.actuate.info.InfoContributor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
+ * 添加 Kubernetes 相关的信息到应用信息中
  * Kubernetes implementation of {@link InfoContributor}.
  *
  * @author Mark Anderson
@@ -44,7 +44,9 @@ public class KubernetesInfoContributor implements InfoContributor {
 	@Override
 	public void contribute(Builder builder) {
 		try {
+			// 获取 pod
 			Pod current = this.utils.currentPod().get();
+			// 添加到应用中
 			Map<String, Object> details = new HashMap<>();
 			if (current != null) {
 				details.put("inside", true);
@@ -54,13 +56,11 @@ public class KubernetesInfoContributor implements InfoContributor {
 				details.put("serviceAccount", current.getSpec().getServiceAccountName());
 				details.put("nodeName", current.getSpec().getNodeName());
 				details.put("hostIp", current.getStatus().getHostIP());
-			}
-			else {
+			} else {
 				details.put("inside", false);
 			}
 			builder.withDetail("kubernetes", details);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			LOG.warn("Failed to get pod details", e);
 		}
 	}

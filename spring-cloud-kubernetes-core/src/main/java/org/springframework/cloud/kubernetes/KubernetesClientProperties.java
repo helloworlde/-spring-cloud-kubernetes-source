@@ -16,9 +16,9 @@
 
 package org.springframework.cloud.kubernetes;
 
-import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
 
 /**
  * Kubernetes client properties.

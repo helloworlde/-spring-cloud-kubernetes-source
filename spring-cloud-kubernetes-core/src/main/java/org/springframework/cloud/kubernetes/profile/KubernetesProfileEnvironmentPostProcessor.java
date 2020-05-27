@@ -19,7 +19,6 @@ package org.springframework.cloud.kubernetes.profile;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigFileApplicationListener;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -28,11 +27,13 @@ import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
+/**
+ * Kubernetes 环境初始化
+ */
 public class KubernetesProfileEnvironmentPostProcessor
-		implements EnvironmentPostProcessor, Ordered {
+	implements EnvironmentPostProcessor, Ordered {
 
-	private static final Log LOG = LogFactory
-			.getLog(KubernetesProfileEnvironmentPostProcessor.class);
+	private static final Log LOG = LogFactory.getLog(KubernetesProfileEnvironmentPostProcessor.class);
 
 	// Before ConfigFileApplicationListener so values there can use these ones
 	private static final int ORDER = ConfigFileApplicationListener.DEFAULT_ORDER - 1;
@@ -41,35 +42,39 @@ public class KubernetesProfileEnvironmentPostProcessor
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment,
-			SpringApplication application) {
+	                                   SpringApplication application) {
 
-		final boolean kubernetesEnabled = environment
-				.getProperty("spring.cloud.kubernetes.enabled", Boolean.class, true);
+		// 判断是否启用 kubernetes，默认为 true
+		final boolean kubernetesEnabled = environment.getProperty("spring.cloud.kubernetes.enabled", Boolean.class, true);
 		if (!kubernetesEnabled) {
 			return;
 		}
 
+		// 如果在 Kubernetes 中
 		if (isInsideKubernetes()) {
+			// 判断是否存在 Kubernetes 环境的配置，如果不存在，则添加到环境变量中
 			if (hasKubernetesProfile(environment)) {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("'kubernetes' already in list of active profiles");
 				}
-			}
-			else {
+			} else {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Adding 'kubernetes' to list of active profiles");
 				}
 				environment.addActiveProfile(KUBERNETES_PROFILE);
 			}
-		}
-		else {
+		} else {
 			if (LOG.isDebugEnabled()) {
-				LOG.warn(
-						"Not running inside kubernetes. Skipping 'kubernetes' profile activation.");
+				LOG.warn("Not running inside kubernetes. Skipping 'kubernetes' profile activation.");
 			}
 		}
 	}
 
+	/**
+	 * 判断是否在 Kubernetes 中
+	 *
+	 * @return
+	 */
 	private boolean isInsideKubernetes() {
 		try (DefaultKubernetesClient client = new DefaultKubernetesClient()) {
 			final StandardPodUtils podUtils = new StandardPodUtils(client);
@@ -77,6 +82,12 @@ public class KubernetesProfileEnvironmentPostProcessor
 		}
 	}
 
+	/**
+	 * 判断是否存在 Kubernetes 环境的配置文件
+	 *
+	 * @param environment
+	 * @return
+	 */
 	private boolean hasKubernetesProfile(Environment environment) {
 		for (String activeProfile : environment.getActiveProfiles()) {
 			if (KUBERNETES_PROFILE.equalsIgnoreCase(activeProfile)) {
