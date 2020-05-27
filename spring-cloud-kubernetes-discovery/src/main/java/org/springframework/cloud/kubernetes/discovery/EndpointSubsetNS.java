@@ -28,6 +28,7 @@ public class EndpointSubsetNS {
 
 	private String namespace;
 
+	// TODO 什么是 EndpointSubset?
 	private List<EndpointSubset> endpointSubset;
 
 	public EndpointSubsetNS() {

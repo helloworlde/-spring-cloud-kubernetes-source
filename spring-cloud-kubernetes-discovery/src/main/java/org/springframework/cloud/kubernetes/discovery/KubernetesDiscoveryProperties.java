@@ -42,6 +42,7 @@ public class KubernetesDiscoveryProperties {
 	/**
 	 * The service name of the local instance.
 	 */
+	// TODO 为什么不是 application，和consul保持一致
 	@Value("${spring.application.name:unknown}")
 	private String serviceName = "unknown";
 

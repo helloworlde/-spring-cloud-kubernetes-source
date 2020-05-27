@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ * 服务注册信息
  * Kubernetes implementation of a {@link Registration}.
  *
  * @author Mauricio Salatino

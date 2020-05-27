@@ -16,12 +16,8 @@
 
 package org.springframework.cloud.kubernetes.registry;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.boot.web.servlet.context.ServletWebServerInitializedEvent;
 import org.springframework.cloud.client.discovery.event.InstanceRegisteredEvent;
 import org.springframework.cloud.client.serviceregistry.AutoServiceRegistration;
@@ -31,18 +27,20 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
+ * 自动注册服务
  * Auto service registration for Kubernetes.
  *
  * @author Mauricio Salatino
  */
 @Deprecated
 // TODO Remove this class in 2.x as it is not used or necessary in Kubernetes
-public class KubernetesAutoServiceRegistration
-		implements AutoServiceRegistration, SmartLifecycle, Ordered {
+public class KubernetesAutoServiceRegistration implements AutoServiceRegistration, SmartLifecycle, Ordered {
 
-	private static final Log log = LogFactory
-			.getLog(KubernetesAutoServiceRegistration.class);
+	private static final Log log = LogFactory.getLog(KubernetesAutoServiceRegistration.class);
 
 	private AtomicBoolean running = new AtomicBoolean(false);
 
@@ -57,8 +55,8 @@ public class KubernetesAutoServiceRegistration
 	private KubernetesRegistration registration;
 
 	public KubernetesAutoServiceRegistration(ApplicationContext context,
-			KubernetesServiceRegistry serviceRegistry,
-			KubernetesRegistration registration) {
+	                                         KubernetesServiceRegistry serviceRegistry,
+	                                         KubernetesRegistration registration) {
 		this.context = context;
 		this.serviceRegistry = serviceRegistry;
 		this.registration = registration;
@@ -77,15 +75,17 @@ public class KubernetesAutoServiceRegistration
 
 	@Override
 	public void start() {
+		// 注册
 		this.serviceRegistry.register(this.registration);
-
-		this.context.publishEvent(
-				new InstanceRegisteredEvent<>(this, this.registration.getProperties()));
+		// 发布注册事件
+		this.context.publishEvent(new InstanceRegisteredEvent<>(this, this.registration.getProperties()));
+		// 修改状态
 		this.running.set(true);
 	}
 
 	@Override
 	public void stop() {
+		// 取消注册
 		this.serviceRegistry.deregister(this.registration);
 		this.running.set(false);
 	}
@@ -105,6 +105,9 @@ public class KubernetesAutoServiceRegistration
 		return 0;
 	}
 
+	/**
+	 * 监听 web服务器初始化事件，注册服务
+	 */
 	@EventListener(ServletWebServerInitializedEvent.class)
 	public void onApplicationEvent(ServletWebServerInitializedEvent event) {
 		// TODO: take SSL into account
@@ -116,6 +119,12 @@ public class KubernetesAutoServiceRegistration
 		}
 	}
 
+
+	/**
+	 * 监听服务关闭事件，取消注册
+	 *
+	 * @param event
+	 */
 	@EventListener(ContextClosedEvent.class)
 	public void onApplicationEvent(ContextClosedEvent event) {
 		if (event.getApplicationContext() == this.context) {

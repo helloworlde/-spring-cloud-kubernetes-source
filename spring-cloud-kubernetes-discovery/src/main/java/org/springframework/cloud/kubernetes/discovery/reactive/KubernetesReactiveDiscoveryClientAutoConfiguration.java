@@ -17,7 +17,6 @@
 package org.springframework.cloud.kubernetes.discovery.reactive;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -48,28 +47,40 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnReactiveDiscoveryEnabled
 @ConditionalOnKubernetesEnabled
 @ConditionalOnKubernetesDiscoveryEnabled
-@AutoConfigureBefore({ SimpleReactiveDiscoveryClientAutoConfiguration.class,
-		ReactiveCommonsClientAutoConfiguration.class })
-@AutoConfigureAfter({ ReactiveCompositeDiscoveryClientAutoConfiguration.class,
-		KubernetesDiscoveryClientAutoConfiguration.class })
+@AutoConfigureBefore({SimpleReactiveDiscoveryClientAutoConfiguration.class, ReactiveCommonsClientAutoConfiguration.class})
+@AutoConfigureAfter({ReactiveCompositeDiscoveryClientAutoConfiguration.class, KubernetesDiscoveryClientAutoConfiguration.class})
 public class KubernetesReactiveDiscoveryClientAutoConfiguration {
 
+	/**
+	 * 服务注册Bean
+	 *
+	 * @param client
+	 * @param properties
+	 * @param kubernetesClientServicesFunction
+	 * @return
+	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public KubernetesReactiveDiscoveryClient kubernetesReactiveDiscoveryClient(
-			KubernetesClient client, KubernetesDiscoveryProperties properties,
-			KubernetesClientServicesFunction kubernetesClientServicesFunction) {
-		return new KubernetesReactiveDiscoveryClient(client, properties,
-				kubernetesClientServicesFunction);
+		KubernetesClient client,
+		KubernetesDiscoveryProperties properties,
+		KubernetesClientServicesFunction kubernetesClientServicesFunction) {
+		return new KubernetesReactiveDiscoveryClient(client, properties, kubernetesClientServicesFunction);
 	}
 
+	/**
+	 * 健康检查
+	 *
+	 * @param client
+	 * @param properties
+	 * @return
+	 */
 	@Bean
-	@ConditionalOnClass(
-			name = "org.springframework.boot.actuate.health.ReactiveHealthIndicator")
+	@ConditionalOnClass(name = "org.springframework.boot.actuate.health.ReactiveHealthIndicator")
 	@ConditionalOnDiscoveryHealthIndicatorEnabled
 	public ReactiveDiscoveryClientHealthIndicator kubernetesReactiveDiscoveryClientHealthIndicator(
-			KubernetesReactiveDiscoveryClient client,
-			DiscoveryClientHealthIndicatorProperties properties) {
+		KubernetesReactiveDiscoveryClient client,
+		DiscoveryClientHealthIndicatorProperties properties) {
 		return new ReactiveDiscoveryClientHealthIndicator(client, properties);
 	}
 

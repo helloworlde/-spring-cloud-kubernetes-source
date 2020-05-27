@@ -29,6 +29,8 @@ import java.util.function.Function;
  * A regular java.util.function that is used to hide the complexity of the
  * KubernetesClient interfaces.
  * <p>
+ * 用于隐藏 KubernetesClient 复杂接口的 function 函数
+ * <p>
  * It's meant to be used to abstract things like:
  * <p>
  * client.services() client.services().withLabel("key", "value")

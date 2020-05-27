@@ -58,21 +58,27 @@ public class KubernetesDiscoveryClientAutoConfiguration {
 	}
 
 	@Bean
-	public KubernetesClientServicesFunction servicesFunction(
-		KubernetesDiscoveryProperties properties) {
+	public KubernetesClientServicesFunction servicesFunction(KubernetesDiscoveryProperties properties) {
+
+		// 如果 serviceLabel 是空的，
 		if (properties.getServiceLabels().isEmpty()) {
+			// 如果是所有的 namespace, 则使用 anyNamespace
 			if (properties.isAllNamespaces()) {
 				return (client) -> client.services()
 				                         .inAnyNamespace();
 			} else {
+				// 否则返回根据client的namespace决定
 				return KubernetesClient::services;
 			}
 		} else {
+			// 如果 serviceLabel 不为空
+			// 且指定是所有命名空间下，则同时指定使用serviceLabel
 			if (properties.isAllNamespaces()) {
 				return (client) -> client.services()
 				                         .inAnyNamespace()
 				                         .withLabels(properties.getServiceLabels());
 			} else {
+				// 不是所有命名空间，则只指定 serviceLabel
 				return (client) -> client.services()
 				                         .withLabels(properties.getServiceLabels());
 			}
@@ -90,7 +96,7 @@ public class KubernetesDiscoveryClientAutoConfiguration {
 	}
 
 	/**
-	 * 服务注册辅助类
+	 * 服务注册信息
 	 *
 	 * @param client
 	 * @param properties

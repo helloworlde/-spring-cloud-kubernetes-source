@@ -124,6 +124,13 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		return instances;
 	}
 
+	/**
+	 * 查询指定命名空间下的服务
+	 *
+	 * @param es
+	 * @param serviceId
+	 * @return
+	 */
 	private List<ServiceInstance> getNamespaceServiceInstances(EndpointSubsetNS es,
 	                                                           String serviceId) {
 		String namespace = es.getNamespace();
@@ -161,23 +168,37 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 					endpointMetadata.putAll(portMetadata);
 				}
 
-				// TODO
 				List<EndpointAddress> addresses = s.getAddresses();
 				for (EndpointAddress endpointAddress : addresses) {
 					String instanceId = null;
+					// 获取实例id
 					if (endpointAddress.getTargetRef() != null) {
 						instanceId = endpointAddress.getTargetRef().getUid();
 					}
 
+					// 获取实例端口
 					EndpointPort endpointPort = findEndpointPort(s);
-					instances.add(new KubernetesServiceInstance(instanceId, serviceId,
-						endpointAddress, endpointPort, endpointMetadata,
-						this.isServicePortSecureResolver
-							.resolve(new DefaultIsServicePortSecureResolver.Input(
-								endpointPort.getPort(),
-								service.getMetadata().getName(),
-								service.getMetadata().getLabels(),
-								service.getMetadata().getAnnotations()))));
+
+					// 创建服务实例并添加到列表中
+					instances.add(
+						new KubernetesServiceInstance(
+							instanceId,
+							serviceId,
+							endpointAddress,
+							endpointPort,
+							endpointMetadata,
+							// 判断是否是安全的
+							this.isServicePortSecureResolver.resolve(
+								// 创建input对象，作为resolve的参数
+								new DefaultIsServicePortSecureResolver.Input(
+									endpointPort.getPort(),
+									service.getMetadata().getName(),
+									service.getMetadata().getLabels(),
+									service.getMetadata().getAnnotations()
+								)
+							)
+						)
+					);
 				}
 			}
 		}
@@ -213,28 +234,41 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		return serviceMetadata;
 	}
 
+
+	// 获取服务端口
 	private EndpointPort findEndpointPort(EndpointSubset s) {
 		List<EndpointPort> ports = s.getPorts();
 		EndpointPort endpointPort;
+		// 如果只有一个，则直接获取
 		if (ports.size() == 1) {
 			endpointPort = ports.get(0);
 		} else {
 			Predicate<EndpointPort> portPredicate;
+			// 如果主端口不为空，则生成判断主端口的条件
 			if (!StringUtils.isEmpty(properties.getPrimaryPortName())) {
 				portPredicate = port -> properties.getPrimaryPortName()
 				                                  .equalsIgnoreCase(port.getName());
 			} else {
+				// 主端口为空，则任意一个都可以
 				portPredicate = port -> true;
 			}
-			endpointPort = ports.stream().filter(portPredicate).findAny()
+			// 查找端口
+			endpointPort = ports.stream()
+			                    .filter(portPredicate)
+			                    .findAny()
 			                    .orElseThrow(IllegalStateException::new);
 		}
 		return endpointPort;
 	}
 
-	// TODO 作用
+	// Endpoint pod的ip和端口映射，代表 REST API 端点，用于访问pod
+	// Endpoints 是 subset 的组合，
+	// { Addresses: [{"ip": "10.10.1.1"}, {"ip": "10.10.2.2"}], Ports: [{"name": "a", "port": 8675}, {"name": "b", "port": 309}] }
+	// The resulting set of endpoints can be viewed as: a: [ 10.10.1.1:8675, 10.10.2.2:8675 ], b: [ 10.10.1.1:309, 10.10.2.2:309 ]
+	// 参考 https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.12/#endpointsubset-v1-core
 	private EndpointSubsetNS getSubsetsFromEndpoints(Endpoints endpoints) {
 		EndpointSubsetNS es = new EndpointSubsetNS();
+		// 设置命名空间
 		es.setNamespace(this.client.getNamespace()); // start with the default that comes
 		// with the client
 		if (endpoints != null && endpoints.getSubsets() != null) {
@@ -245,6 +279,7 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		return es;
 	}
 
+	// 返回给key加上前缀的 map
 	// returns a new map that contain all the entries of the original map
 	// but with the keys prefixed
 	// if the prefix is null or empty, the map itself is returned (unchanged of course)
@@ -265,17 +300,25 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		return result;
 	}
 
+	/**
+	 * 获取服务列表
+	 *
+	 * @return
+	 */
 	@Override
 	public List<String> getServices() {
+		// 过滤表达式
 		String spelExpression = this.properties.getFilter();
 		Predicate<Service> filteredServices;
+		// 如果过滤表达式为空，则直接返回
 		if (spelExpression == null || spelExpression.isEmpty()) {
 			filteredServices = (Service instance) -> true;
 		} else {
+			// 表达式部位可能够， 则解析并过滤
 			Expression filterExpr = this.parser.parseExpression(spelExpression);
 			filteredServices = (Service instance) -> {
-				Boolean include = filterExpr.getValue(this.evalCtxt, instance,
-					Boolean.class);
+				Boolean include = filterExpr.getValue(this.evalCtxt, instance, Boolean.class);
+
 				if (include == null) {
 					return false;
 				}
@@ -285,9 +328,14 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		return getServices(filteredServices);
 	}
 
+	// 根据条件过滤服务，返回服务的名称集合
 	public List<String> getServices(Predicate<Service> filter) {
-		return this.kubernetesClientServicesFunction.apply(this.client).list().getItems()
-		                                            .stream().filter(filter).map(s -> s.getMetadata().getName())
+		return this.kubernetesClientServicesFunction.apply(this.client)
+		                                            .list()
+		                                            .getItems()
+		                                            .stream()
+		                                            .filter(filter)
+		                                            .map(s -> s.getMetadata().getName())
 		                                            .collect(Collectors.toList());
 	}
 

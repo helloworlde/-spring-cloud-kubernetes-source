@@ -17,17 +17,18 @@
 package org.springframework.cloud.kubernetes.discovery.reactive;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
-
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.ReactiveDiscoveryClient;
 import org.springframework.cloud.kubernetes.discovery.KubernetesClientServicesFunction;
 import org.springframework.cloud.kubernetes.discovery.KubernetesDiscoveryClient;
 import org.springframework.cloud.kubernetes.discovery.KubernetesDiscoveryProperties;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
+
 
 /**
+ * Reactive下的服务注册，区别是返回的集合不一样
  * Kubernetes implementation of {@link ReactiveDiscoveryClient}. Currently relies on the
  * {@link KubernetesDiscoveryClient} for feature parity.
  *
@@ -38,10 +39,9 @@ public class KubernetesReactiveDiscoveryClient implements ReactiveDiscoveryClien
 	private final KubernetesDiscoveryClient kubernetesDiscoveryClient;
 
 	public KubernetesReactiveDiscoveryClient(KubernetesClient client,
-			KubernetesDiscoveryProperties properties,
-			KubernetesClientServicesFunction kubernetesClientServicesFunction) {
-		this.kubernetesDiscoveryClient = new KubernetesDiscoveryClient(client, properties,
-				kubernetesClientServicesFunction);
+	                                         KubernetesDiscoveryProperties properties,
+	                                         KubernetesClientServicesFunction kubernetesClientServicesFunction) {
+		this.kubernetesDiscoveryClient = new KubernetesDiscoveryClient(client, properties, kubernetesClientServicesFunction);
 	}
 
 	@Override
@@ -51,19 +51,15 @@ public class KubernetesReactiveDiscoveryClient implements ReactiveDiscoveryClien
 
 	@Override
 	public Flux<ServiceInstance> getInstances(String serviceId) {
-		Assert.notNull(serviceId,
-				"[Assertion failed] - the object argument must not be null");
-		return Flux
-				.defer(() -> Flux
-						.fromIterable(kubernetesDiscoveryClient.getInstances(serviceId)))
-				.subscribeOn(Schedulers.boundedElastic());
+		Assert.notNull(serviceId, "[Assertion failed] - the object argument must not be null");
+		return Flux.defer(() -> Flux.fromIterable(kubernetesDiscoveryClient.getInstances(serviceId)))
+		           .subscribeOn(Schedulers.boundedElastic());
 	}
 
 	@Override
 	public Flux<String> getServices() {
-		return Flux
-				.defer(() -> Flux.fromIterable(kubernetesDiscoveryClient.getServices()))
-				.subscribeOn(Schedulers.boundedElastic());
+		return Flux.defer(() -> Flux.fromIterable(kubernetesDiscoveryClient.getServices()))
+		           .subscribeOn(Schedulers.boundedElastic());
 	}
 
 }

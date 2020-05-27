@@ -60,6 +60,7 @@ public class KubernetesCatalogWatch implements ApplicationEventPublisherAware {
 	}
 
 	// 定时任务拉取
+	// 依赖于 @EnableScheduling，默认不会生效
 	@Scheduled(fixedDelayString = "${spring.cloud.kubernetes.discovery.catalogServicesWatchDelay:30000}")
 	public void catalogServicesWatch() {
 		try {
