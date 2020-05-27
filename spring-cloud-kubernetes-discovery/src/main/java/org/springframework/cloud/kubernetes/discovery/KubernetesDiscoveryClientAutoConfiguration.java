@@ -17,7 +17,6 @@
 package org.springframework.cloud.kubernetes.discovery;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,6 +32,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
+ * 服务发现自动配置
  * Auto configuration for discovery clients.
  *
  * @author Mauricio Salatino
@@ -41,52 +41,72 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnDiscoveryEnabled
 @ConditionalOnKubernetesEnabled
-@AutoConfigureBefore({ SimpleDiscoveryClientAutoConfiguration.class,
-		CommonsClientAutoConfiguration.class })
-@AutoConfigureAfter({ KubernetesAutoConfiguration.class })
+@AutoConfigureBefore({SimpleDiscoveryClientAutoConfiguration.class, CommonsClientAutoConfiguration.class})
+@AutoConfigureAfter({KubernetesAutoConfiguration.class})
 public class KubernetesDiscoveryClientAutoConfiguration {
 
+	/**
+	 * 初始化判断是否安全的类
+	 *
+	 * @param properties
+	 * @return
+	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public DefaultIsServicePortSecureResolver isServicePortSecureResolver(
-			KubernetesDiscoveryProperties properties) {
+	public DefaultIsServicePortSecureResolver isServicePortSecureResolver(KubernetesDiscoveryProperties properties) {
 		return new DefaultIsServicePortSecureResolver(properties);
 	}
 
 	@Bean
 	public KubernetesClientServicesFunction servicesFunction(
-			KubernetesDiscoveryProperties properties) {
+		KubernetesDiscoveryProperties properties) {
 		if (properties.getServiceLabels().isEmpty()) {
 			if (properties.isAllNamespaces()) {
-				return (client) -> client.services().inAnyNamespace();
-			}
-			else {
+				return (client) -> client.services()
+				                         .inAnyNamespace();
+			} else {
 				return KubernetesClient::services;
 			}
-		}
-		else {
+		} else {
 			if (properties.isAllNamespaces()) {
-				return (client) -> client.services().inAnyNamespace()
-						.withLabels(properties.getServiceLabels());
-			}
-			else {
 				return (client) -> client.services()
-						.withLabels(properties.getServiceLabels());
+				                         .inAnyNamespace()
+				                         .withLabels(properties.getServiceLabels());
+			} else {
+				return (client) -> client.services()
+				                         .withLabels(properties.getServiceLabels());
 			}
 		}
 	}
 
+	/**
+	 * 服务注册类
+	 *
+	 * @return
+	 */
 	@Bean
 	public KubernetesServiceRegistry getServiceRegistry() {
 		return new KubernetesServiceRegistry();
 	}
 
+	/**
+	 * 服务注册辅助类
+	 *
+	 * @param client
+	 * @param properties
+	 * @return
+	 */
 	@Bean
 	public KubernetesRegistration getRegistration(KubernetesClient client,
-			KubernetesDiscoveryProperties properties) {
+	                                              KubernetesDiscoveryProperties properties) {
 		return new KubernetesRegistration(client, properties);
 	}
 
+	/**
+	 * 属性配置
+	 *
+	 * @return
+	 */
 	@Bean
 	public KubernetesDiscoveryProperties getKubernetesDiscoveryProperties() {
 		return new KubernetesDiscoveryProperties();
@@ -97,14 +117,24 @@ public class KubernetesDiscoveryClientAutoConfiguration {
 	@ConditionalOnKubernetesDiscoveryEnabled
 	public static class KubernetesDiscoveryClientConfiguration {
 
+		/**
+		 * 初始化服务发现类
+		 *
+		 * @param client
+		 * @param properties
+		 * @param kubernetesClientServicesFunction
+		 * @param isServicePortSecureResolver
+		 * @return
+		 */
 		@Bean
 		@ConditionalOnMissingBean
 		public KubernetesDiscoveryClient kubernetesDiscoveryClient(
-				KubernetesClient client, KubernetesDiscoveryProperties properties,
-				KubernetesClientServicesFunction kubernetesClientServicesFunction,
-				DefaultIsServicePortSecureResolver isServicePortSecureResolver) {
+			KubernetesClient client,
+			KubernetesDiscoveryProperties properties,
+			KubernetesClientServicesFunction kubernetesClientServicesFunction,
+			DefaultIsServicePortSecureResolver isServicePortSecureResolver) {
 			return new KubernetesDiscoveryClient(client, properties,
-					kubernetesClientServicesFunction, isServicePortSecureResolver);
+				kubernetesClientServicesFunction, isServicePortSecureResolver);
 		}
 
 	}

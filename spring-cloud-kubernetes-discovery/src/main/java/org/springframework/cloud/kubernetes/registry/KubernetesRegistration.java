@@ -16,17 +16,16 @@
 
 package org.springframework.cloud.kubernetes.registry;
 
+import io.fabric8.kubernetes.client.KubernetesClient;
+import org.springframework.cloud.client.serviceregistry.Registration;
+import org.springframework.cloud.kubernetes.discovery.KubernetesDiscoveryProperties;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.fabric8.kubernetes.client.KubernetesClient;
-
-import org.springframework.cloud.client.serviceregistry.Registration;
-import org.springframework.cloud.kubernetes.discovery.KubernetesDiscoveryProperties;
 
 /**
  * Kubernetes implementation of a {@link Registration}.
@@ -42,7 +41,7 @@ public class KubernetesRegistration implements Registration, Closeable {
 	private AtomicBoolean running = new AtomicBoolean(false);
 
 	public KubernetesRegistration(KubernetesClient client,
-			KubernetesDiscoveryProperties properties) {
+	                              KubernetesDiscoveryProperties properties) {
 		this.client = client;
 		this.properties = properties;
 	}
@@ -76,8 +75,7 @@ public class KubernetesRegistration implements Registration, Closeable {
 	public URI getUri() {
 		try {
 			return this.client.getMasterUrl().toURI();
-		}
-		catch (URISyntaxException e) {
+		} catch (URISyntaxException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -95,7 +93,7 @@ public class KubernetesRegistration implements Registration, Closeable {
 	@Override
 	public String toString() {
 		return "KubernetesRegistration{" + "client=" + this.client + ", properties="
-				+ this.properties + ", running=" + this.running + '}';
+			+ this.properties + ", running=" + this.running + '}';
 	}
 
 }

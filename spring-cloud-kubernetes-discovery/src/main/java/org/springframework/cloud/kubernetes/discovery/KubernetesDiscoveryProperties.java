@@ -16,15 +16,15 @@
 
 package org.springframework.cloud.kubernetes.discovery;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.core.style.ToStringCreator;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Kubernetes discovery properties.
@@ -34,14 +34,20 @@ import org.springframework.core.style.ToStringCreator;
 @ConfigurationProperties("spring.cloud.kubernetes.discovery")
 public class KubernetesDiscoveryProperties {
 
-	/** If Kubernetes Discovery is enabled. */
+	/**
+	 * If Kubernetes Discovery is enabled.
+	 */
 	private boolean enabled = true;
 
-	/** The service name of the local instance. */
+	/**
+	 * The service name of the local instance.
+	 */
 	@Value("${spring.application.name:unknown}")
 	private String serviceName = "unknown";
 
-	/** If discovering all namespaces. */
+	/**
+	 * If discovering all namespaces.
+	 */
 	private boolean allNamespaces = false;
 
 	/**
@@ -50,7 +56,9 @@ public class KubernetesDiscoveryProperties {
 	 */
 	private String filter;
 
-	/** Set the port numbers that are considered secure and use HTTPS. */
+	/**
+	 * Set the port numbers that are considered secure and use HTTPS.
+	 */
 	private Set<Integer> knownSecurePorts = new HashSet<Integer>() {
 		{
 			add(443);
@@ -61,12 +69,14 @@ public class KubernetesDiscoveryProperties {
 	/**
 	 * If set, then only the services matching these labels will be fetched from the
 	 * Kubernetes API server.
+	 * 如果设置了 label 则只拉取匹配 label 的服务
 	 */
 	private Map<String, String> serviceLabels = new HashMap<>();
 
 	/**
 	 * If set then the port with a given name is used as primary when multiple ports are
 	 * defined for a service.
+	 * 当有多个端口时指定一个主端口的名称
 	 */
 	private String primaryPortName;
 
@@ -149,10 +159,10 @@ public class KubernetesDiscoveryProperties {
 	@Override
 	public String toString() {
 		return new ToStringCreator(this).append("enabled", this.enabled)
-				.append("serviceName", this.serviceName).append("filter", this.filter)
-				.append("knownSecurePorts", this.knownSecurePorts)
-				.append("serviceLabels", this.serviceLabels)
-				.append("metadata", this.metadata).toString();
+		                                .append("serviceName", this.serviceName).append("filter", this.filter)
+		                                .append("knownSecurePorts", this.knownSecurePorts)
+		                                .append("serviceLabels", this.serviceLabels)
+		                                .append("metadata", this.metadata).toString();
 	}
 
 	/**
@@ -247,11 +257,11 @@ public class KubernetesDiscoveryProperties {
 		@Override
 		public String toString() {
 			return new ToStringCreator(this).append("addLabels", this.addLabels)
-					.append("labelsPrefix", this.labelsPrefix)
-					.append("addAnnotations", this.addAnnotations)
-					.append("annotationsPrefix", this.annotationsPrefix)
-					.append("addPorts", this.addPorts)
-					.append("portsPrefix", this.portsPrefix).toString();
+			                                .append("labelsPrefix", this.labelsPrefix)
+			                                .append("addAnnotations", this.addAnnotations)
+			                                .append("annotationsPrefix", this.annotationsPrefix)
+			                                .append("addPorts", this.addPorts)
+			                                .append("portsPrefix", this.portsPrefix).toString();
 		}
 
 	}

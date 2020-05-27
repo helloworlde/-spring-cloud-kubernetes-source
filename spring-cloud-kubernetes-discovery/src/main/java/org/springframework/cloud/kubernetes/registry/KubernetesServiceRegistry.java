@@ -18,16 +18,15 @@ package org.springframework.cloud.kubernetes.registry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.cloud.client.serviceregistry.ServiceRegistry;
 
 /**
+ * 服务注册类，未实现具体功能
  * Kubernetes {@link ServiceRegistry}.
  *
  * @author Mauricio Salatino
  */
-public class KubernetesServiceRegistry
-		implements ServiceRegistry<KubernetesRegistration> {
+public class KubernetesServiceRegistry implements ServiceRegistry<KubernetesRegistration> {
 
 	private static final Log log = LogFactory.getLog(KubernetesServiceRegistry.class);
 
