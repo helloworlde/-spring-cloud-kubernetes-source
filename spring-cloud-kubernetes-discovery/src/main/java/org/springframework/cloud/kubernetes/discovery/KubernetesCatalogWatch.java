@@ -16,12 +16,6 @@
 
 package org.springframework.cloud.kubernetes.discovery;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
 import io.fabric8.kubernetes.api.model.EndpointAddress;
 import io.fabric8.kubernetes.api.model.EndpointSubset;
 import io.fabric8.kubernetes.api.model.Endpoints;
@@ -29,22 +23,29 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.cloud.client.discovery.event.HeartbeatEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
 /**
+ * Kubernetes 服务监听
+ *
  * @author Oleg Vyukov
  */
 public class KubernetesCatalogWatch implements ApplicationEventPublisherAware {
 
-	private static final Logger logger = LoggerFactory
-			.getLogger(KubernetesCatalogWatch.class);
+	private static final Logger logger = LoggerFactory.getLogger(KubernetesCatalogWatch.class);
 
 	private final KubernetesClient kubernetesClient;
 
+	// 保存pod名称列表
 	private final AtomicReference<List<String>> catalogEndpointsState = new AtomicReference<>();
 
 	private ApplicationEventPublisher publisher;
@@ -58,34 +59,44 @@ public class KubernetesCatalogWatch implements ApplicationEventPublisherAware {
 		this.publisher = publisher;
 	}
 
-	@Scheduled(
-			fixedDelayString = "${spring.cloud.kubernetes.discovery.catalogServicesWatchDelay:30000}")
+	// 定时任务拉取
+	@Scheduled(fixedDelayString = "${spring.cloud.kubernetes.discovery.catalogServicesWatchDelay:30000}")
 	public void catalogServicesWatch() {
 		try {
 			List<String> previousState = this.catalogEndpointsState.get();
 
 			// not all pods participate in the service discovery. only those that have
 			// endpoints.
-			List<Endpoints> endpoints = this.kubernetesClient.endpoints().list()
-					.getItems();
-			List<String> endpointsPodNames = endpoints.stream().map(Endpoints::getSubsets)
-					.filter(Objects::nonNull).flatMap(Collection::stream)
-					.map(EndpointSubset::getAddresses).filter(Objects::nonNull)
-					.flatMap(Collection::stream).map(EndpointAddress::getTargetRef)
-					.filter(Objects::nonNull).map(ObjectReference::getName) // pod name
-																			// unique in
-																			// namespace
-					.sorted(String::compareTo).collect(Collectors.toList());
+			// 仅有 endpoint 的服务参与服务发现 TODO 什么是 endpoint
+			List<Endpoints> endpoints = this.kubernetesClient.endpoints()
+			                                                 .list()
+			                                                 .getItems();
+
+			// 将 endpoint 转为pod名称
+			// TODO pod名称有重复，可能是个bug，需要去重
+			List<String> endpointsPodNames = endpoints.stream()
+			                                          .map(Endpoints::getSubsets)
+			                                          .filter(Objects::nonNull)
+			                                          .flatMap(Collection::stream)
+			                                          .map(EndpointSubset::getAddresses)
+			                                          .filter(Objects::nonNull)
+			                                          .flatMap(Collection::stream)
+			                                          .map(EndpointAddress::getTargetRef)
+			                                          .filter(Objects::nonNull)
+			                                          .map(ObjectReference::getName) // pod name
+			                                          // unique in
+			                                          // namespace
+			                                          .sorted(String::compareTo)
+			                                          .collect(Collectors.toList());
 
 			this.catalogEndpointsState.set(endpointsPodNames);
 
+			// 如果 pod 列表发生变化，则发送 HeartbeatEvent 事件
 			if (!endpointsPodNames.equals(previousState)) {
-				logger.trace("Received endpoints update from kubernetesClient: {}",
-						endpointsPodNames);
+				logger.trace("Received endpoints update from kubernetesClient: {}", endpointsPodNames);
 				this.publisher.publishEvent(new HeartbeatEvent(this, endpointsPodNames));
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			logger.error("Error watching Kubernetes Services", e);
 		}
 	}
