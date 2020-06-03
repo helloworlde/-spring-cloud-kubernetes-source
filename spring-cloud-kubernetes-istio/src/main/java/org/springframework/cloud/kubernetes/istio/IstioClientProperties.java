@@ -20,6 +20,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
+ * Istio 配偶属性
  * Istio client properties.
  *
  * @author Mauricio Salatino
