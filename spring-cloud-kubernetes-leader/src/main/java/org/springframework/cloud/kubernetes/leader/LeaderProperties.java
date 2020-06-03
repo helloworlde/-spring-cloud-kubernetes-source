@@ -16,11 +16,13 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
-import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+
 /**
+ * Leader 属性
+ *
  * @author Gytis Trikleris
  */
 @ConfigurationProperties("spring.cloud.kubernetes.leader")

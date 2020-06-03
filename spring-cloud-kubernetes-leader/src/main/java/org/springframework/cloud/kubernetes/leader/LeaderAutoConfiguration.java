@@ -16,11 +16,7 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
-import java.net.Inet4Address;
-import java.net.UnknownHostException;
-
 import io.fabric8.kubernetes.client.KubernetesClient;
-
 import org.springframework.boot.actuate.info.InfoContributor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -35,68 +31,122 @@ import org.springframework.integration.leader.DefaultCandidate;
 import org.springframework.integration.leader.event.DefaultLeaderEventPublisher;
 import org.springframework.integration.leader.event.LeaderEventPublisher;
 
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
+
 /**
  * @author Gytis Trikleris
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(LeaderProperties.class)
 @ConditionalOnBean(KubernetesClient.class)
-@ConditionalOnProperty(value = "spring.cloud.kubernetes.leader.enabled",
-		matchIfMissing = true)
+@ConditionalOnProperty(value = "spring.cloud.kubernetes.leader.enabled", matchIfMissing = true)
 public class LeaderAutoConfiguration {
 
+	/**
+	 * Leader 事件发布
+	 *
+	 * @param applicationEventPublisher
+	 * @return
+	 */
 	@Bean
 	@ConditionalOnMissingBean(LeaderEventPublisher.class)
-	public LeaderEventPublisher defaultLeaderEventPublisher(
-			ApplicationEventPublisher applicationEventPublisher) {
+	public LeaderEventPublisher defaultLeaderEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
 		return new DefaultLeaderEventPublisher(applicationEventPublisher);
 	}
 
+	/**
+	 * 候选人
+	 *
+	 * @param leaderProperties
+	 * @return
+	 * @throws UnknownHostException
+	 */
 	@Bean
 	public Candidate candidate(LeaderProperties leaderProperties)
-			throws UnknownHostException {
+		throws UnknownHostException {
 		String id = Inet4Address.getLocalHost().getHostName();
 		String role = leaderProperties.getRole();
 
 		return new DefaultCandidate(id, role);
 	}
 
+	/**
+	 * leader 控制接口
+	 *
+	 * @param candidate
+	 * @param leaderProperties
+	 * @param leaderEventPublisher
+	 * @param kubernetesClient
+	 * @return
+	 */
 	@Bean
 	public LeadershipController leadershipController(Candidate candidate,
-			LeaderProperties leaderProperties, LeaderEventPublisher leaderEventPublisher,
-			KubernetesClient kubernetesClient) {
-		return new LeadershipController(candidate, leaderProperties, leaderEventPublisher,
-				kubernetesClient);
+	                                                 LeaderProperties leaderProperties,
+	                                                 LeaderEventPublisher leaderEventPublisher,
+	                                                 KubernetesClient kubernetesClient) {
+		return new LeadershipController(candidate, leaderProperties, leaderEventPublisher, kubernetesClient);
 	}
 
+	/**
+	 * Leader 事件监听
+	 *
+	 * @param leaderProperties
+	 * @param leadershipController
+	 * @param kubernetesClient
+	 * @return
+	 */
 	@Bean
 	public LeaderRecordWatcher leaderRecordWatcher(LeaderProperties leaderProperties,
-			LeadershipController leadershipController,
-			KubernetesClient kubernetesClient) {
-		return new LeaderRecordWatcher(leaderProperties, leadershipController,
-				kubernetesClient);
+	                                               LeadershipController leadershipController,
+	                                               KubernetesClient kubernetesClient) {
+		return new LeaderRecordWatcher(leaderProperties, leadershipController, kubernetesClient);
 	}
 
+	/**
+	 * Pod ready 监听
+	 *
+	 * @param candidate
+	 * @param kubernetesClient
+	 * @param leadershipController
+	 * @return
+	 */
 	@Bean
 	public PodReadinessWatcher hostPodWatcher(Candidate candidate,
-			KubernetesClient kubernetesClient,
-			LeadershipController leadershipController) {
-		return new PodReadinessWatcher(candidate.getId(), kubernetesClient,
-				leadershipController);
+	                                          KubernetesClient kubernetesClient,
+	                                          LeadershipController leadershipController) {
+		return new PodReadinessWatcher(candidate.getId(), kubernetesClient, leadershipController);
 	}
 
+	/**
+	 * Leader 初始化
+	 *
+	 * @param leaderProperties
+	 * @param leadershipController
+	 * @param leaderRecordWatcher
+	 * @param hostPodWatcher
+	 * @return
+	 */
 	@Bean(destroyMethod = "stop")
 	public LeaderInitiator leaderInitiator(LeaderProperties leaderProperties,
-			LeadershipController leadershipController,
-			LeaderRecordWatcher leaderRecordWatcher, PodReadinessWatcher hostPodWatcher) {
+	                                       LeadershipController leadershipController,
+	                                       LeaderRecordWatcher leaderRecordWatcher,
+	                                       PodReadinessWatcher hostPodWatcher) {
 		return new LeaderInitiator(leaderProperties, leadershipController,
-				leaderRecordWatcher, hostPodWatcher);
+			leaderRecordWatcher, hostPodWatcher);
 	}
 
+	/**
+	 * 构建 leader 信息
+	 *
+	 * @param leadershipController
+	 * @param candidate
+	 * @return
+	 */
 	@Bean
 	@ConditionalOnClass(InfoContributor.class)
 	public LeaderInfoContributor leaderInfoContributor(
-			LeadershipController leadershipController, Candidate candidate) {
+		LeadershipController leadershipController, Candidate candidate) {
 		return new LeaderInfoContributor(leadershipController, candidate);
 	}
 

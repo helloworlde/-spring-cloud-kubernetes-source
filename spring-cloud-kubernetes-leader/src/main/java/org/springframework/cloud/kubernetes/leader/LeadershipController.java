@@ -16,21 +16,20 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.integration.leader.Candidate;
 import org.springframework.integration.leader.Context;
 import org.springframework.integration.leader.event.LeaderEventPublisher;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * @author Gytis Trikleris
@@ -45,8 +44,7 @@ public class LeadershipController {
 
 	private static final String KIND = "leaders";
 
-	private static final Logger LOGGER = LoggerFactory
-			.getLogger(LeadershipController.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(LeadershipController.class);
 
 	private final Candidate candidate;
 
@@ -60,9 +58,10 @@ public class LeadershipController {
 
 	private PodReadinessWatcher leaderReadinessWatcher;
 
-	public LeadershipController(Candidate candidate, LeaderProperties leaderProperties,
-			LeaderEventPublisher leaderEventPublisher,
-			KubernetesClient kubernetesClient) {
+	public LeadershipController(Candidate candidate,
+	                            LeaderProperties leaderProperties,
+	                            LeaderEventPublisher leaderEventPublisher,
+	                            KubernetesClient kubernetesClient) {
 		this.candidate = candidate;
 		this.leaderProperties = leaderProperties;
 		this.leaderEventPublisher = leaderEventPublisher;
@@ -85,8 +84,7 @@ public class LeadershipController {
 
 		if (leader != null && leader.isCandidate(this.candidate)) {
 			revoke(configMap);
-		}
-		else {
+		} else {
 			acquire(configMap);
 		}
 	}
@@ -107,10 +105,9 @@ public class LeadershipController {
 			String leaderKey = getLeaderKey();
 			removeConfigMapEntry(configMap, leaderKey);
 			handleLeaderChange(null);
-		}
-		catch (KubernetesClientException e) {
+		} catch (KubernetesClientException e) {
 			LOGGER.warn("Failure when revoking leadership for '{}': {}", this.candidate,
-					e.getMessage());
+				e.getMessage());
 		}
 	}
 
@@ -119,8 +116,8 @@ public class LeadershipController {
 
 		if (!isPodReady(this.candidate.getId())) {
 			LOGGER.debug(
-					"Pod of '{}' is not ready at the moment, cannot acquire leadership",
-					this.candidate);
+				"Pod of '{}' is not ready at the moment, cannot acquire leadership",
+				this.candidate);
 			return;
 		}
 
@@ -128,18 +125,15 @@ public class LeadershipController {
 			Map<String, String> data = getLeaderData(this.candidate);
 			if (configMap == null) {
 				createConfigMap(data);
-			}
-			else {
+			} else {
 				updateConfigMapEntry(configMap, data);
 			}
 
-			Leader newLeader = new Leader(this.candidate.getRole(),
-					this.candidate.getId());
+			Leader newLeader = new Leader(this.candidate.getRole(), this.candidate.getId());
 			handleLeaderChange(newLeader);
-		}
-		catch (KubernetesClientException e) {
+		} catch (KubernetesClientException e) {
 			LOGGER.warn("Failure when acquiring leadership for '{}': {}", this.candidate,
-					e.getMessage());
+				e.getMessage());
 			notifyOnFailedToAcquire();
 		}
 	}
@@ -155,8 +149,7 @@ public class LeadershipController {
 
 		if (oldLeader != null && oldLeader.isCandidate(this.candidate)) {
 			notifyOnRevoked();
-		}
-		else if (newLeader != null && newLeader.isCandidate(this.candidate)) {
+		} else if (newLeader != null && newLeader.isCandidate(this.candidate)) {
 			notifyOnGranted();
 		}
 
@@ -170,11 +163,10 @@ public class LeadershipController {
 
 		Context context = new LeaderContext(this.candidate, this);
 		this.leaderEventPublisher.publishOnGranted(this, context,
-				this.candidate.getRole());
+			this.candidate.getRole());
 		try {
 			this.candidate.onGranted(context);
-		}
-		catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			LOGGER.warn(e.getMessage());
 			Thread.currentThread().interrupt();
 		}
@@ -185,7 +177,7 @@ public class LeadershipController {
 
 		Context context = new LeaderContext(this.candidate, this);
 		this.leaderEventPublisher.publishOnRevoked(this, context,
-				this.candidate.getRole());
+			this.candidate.getRole());
 		this.candidate.onRevoked(context);
 	}
 
@@ -193,10 +185,13 @@ public class LeadershipController {
 		if (this.leaderProperties.isPublishFailedEvents()) {
 			Context context = new LeaderContext(this.candidate, this);
 			this.leaderEventPublisher.publishOnFailedToAcquire(this, context,
-					this.candidate.getRole());
+				this.candidate.getRole());
 		}
 	}
 
+	/**
+	 * 重新启动 Leader 的 Watcher
+	 */
 	private void restartLeaderReadinessWatcher() {
 		if (this.leaderReadinessWatcher != null) {
 			this.leaderReadinessWatcher.stop();
@@ -205,7 +200,7 @@ public class LeadershipController {
 
 		if (this.localLeader != null && !this.localLeader.isCandidate(this.candidate)) {
 			this.leaderReadinessWatcher = new PodReadinessWatcher(
-					this.localLeader.getId(), this.kubernetesClient, this);
+				this.localLeader.getId(), this.kubernetesClient, this);
 			this.leaderReadinessWatcher.start();
 		}
 	}
@@ -214,17 +209,30 @@ public class LeadershipController {
 		return this.leaderProperties.getLeaderIdPrefix() + this.candidate.getRole();
 	}
 
+	/**
+	 * 获取 leader 数据
+	 *
+	 * @param candidate
+	 * @return
+	 */
 	private Map<String, String> getLeaderData(Candidate candidate) {
 		String leaderKey = getLeaderKey();
 		return Collections.singletonMap(leaderKey, candidate.getId());
 	}
 
+	/**
+	 * 选取 leader
+	 *
+	 * @param configMap
+	 * @return
+	 */
 	private Leader extractLeader(ConfigMap configMap) {
 		if (configMap == null || configMap.getData() == null) {
 			return null;
 		}
 
 		Map<String, String> data = configMap.getData();
+		// 获取 leader key
 		String leaderKey = getLeaderKey();
 		String leaderId = data.get(leaderKey);
 		if (leaderId == null) {
@@ -234,56 +242,93 @@ public class LeadershipController {
 		return new Leader(this.candidate.getRole(), leaderId);
 	}
 
+	/**
+	 * 检查 Pod 是否处于 Ready
+	 *
+	 * @param name
+	 * @return
+	 */
 	private boolean isPodReady(String name) {
 		return this.kubernetesClient.pods().withName(name).isReady();
 	}
 
+	/**
+	 * 获取 Leader 的 ConfigMap
+	 *
+	 * @return
+	 */
 	private ConfigMap getConfigMap() {
 		return this.kubernetesClient.configMaps()
-				.inNamespace(this.leaderProperties
-						.getNamespace(this.kubernetesClient.getNamespace()))
-				.withName(this.leaderProperties.getConfigMapName()).get();
+		                            .inNamespace(this.leaderProperties
+			                            .getNamespace(this.kubernetesClient.getNamespace()))
+		                            .withName(this.leaderProperties.getConfigMapName()).get();
 	}
 
+	/**
+	 * 创建 ConfigMap
+	 *
+	 * @param data
+	 */
 	private void createConfigMap(Map<String, String> data) {
 		LOGGER.debug("Creating new config map with data: {}", data);
 
 		ConfigMap newConfigMap = new ConfigMapBuilder().withNewMetadata()
-				.withName(this.leaderProperties.getConfigMapName())
-				.addToLabels(PROVIDER_KEY, PROVIDER).addToLabels(KIND_KEY, KIND)
-				.endMetadata().addToData(data).build();
+		                                               .withName(this.leaderProperties.getConfigMapName())
+		                                               .addToLabels(PROVIDER_KEY, PROVIDER)
+		                                               .addToLabels(KIND_KEY, KIND)
+		                                               .endMetadata()
+		                                               .addToData(data)
+		                                               .build();
 
 		this.kubernetesClient.configMaps()
-				.inNamespace(this.leaderProperties
-						.getNamespace(this.kubernetesClient.getNamespace()))
-				.create(newConfigMap);
+		                     .inNamespace(this.leaderProperties
+			                     .getNamespace(this.kubernetesClient.getNamespace()))
+		                     .create(newConfigMap);
 	}
 
+	/**
+	 * 更新 ConfigMap 内容
+	 *
+	 * @param configMap
+	 * @param newData
+	 */
 	private void updateConfigMapEntry(ConfigMap configMap, Map<String, String> newData) {
 		LOGGER.debug("Adding new data to config map: {}", newData);
 
 		ConfigMap newConfigMap = new ConfigMapBuilder(configMap).addToData(newData)
-				.build();
+		                                                        .build();
 
 		updateConfigMap(configMap, newConfigMap);
 	}
 
+	/**
+	 * 移除 ConfigMap 内容
+	 *
+	 * @param configMap
+	 * @param key
+	 */
 	private void removeConfigMapEntry(ConfigMap configMap, String key) {
 		LOGGER.debug("Removing config map entry '{}'", key);
 
 		ConfigMap newConfigMap = new ConfigMapBuilder(configMap).removeFromData(key)
-				.build();
+		                                                        .build();
 
 		updateConfigMap(configMap, newConfigMap);
 	}
 
+	/**
+	 * 更新 ConfigMap
+	 *
+	 * @param oldConfigMap
+	 * @param newConfigMap
+	 */
 	private void updateConfigMap(ConfigMap oldConfigMap, ConfigMap newConfigMap) {
 		this.kubernetesClient.configMaps()
-				.inNamespace(this.leaderProperties
-						.getNamespace(this.kubernetesClient.getNamespace()))
-				.withName(this.leaderProperties.getConfigMapName())
-				.lockResourceVersion(oldConfigMap.getMetadata().getResourceVersion())
-				.replace(newConfigMap);
+		                     .inNamespace(this.leaderProperties
+			                     .getNamespace(this.kubernetesClient.getNamespace()))
+		                     .withName(this.leaderProperties.getConfigMapName())
+		                     .lockResourceVersion(oldConfigMap.getMetadata().getResourceVersion())
+		                     .replace(newConfigMap);
 	}
 
 }
