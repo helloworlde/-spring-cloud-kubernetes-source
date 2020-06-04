@@ -16,13 +16,8 @@
 
 package org.springframework.cloud.kubernetes.istio;
 
-import java.util.Arrays;
-
-import javax.annotation.PostConstruct;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -32,7 +27,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
+import javax.annotation.PostConstruct;
+import java.util.Arrays;
+
 /**
+ * Istio 启动配置
  * Auto configuration for Istio bootstrap.
  *
  * @author Mauricio Salatino
@@ -46,6 +45,12 @@ public class IstioBootstrapConfiguration {
 
 	private static final String ISTIO_PROFILE = "istio";
 
+	/**
+	 * Mesh 检查工具
+	 *
+	 * @param istioClientProperties
+	 * @return
+	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public MeshUtils istioMeshUtils(IstioClientProperties istioClientProperties) {
@@ -60,7 +65,7 @@ public class IstioBootstrapConfiguration {
 		private final ConfigurableEnvironment environment;
 
 		public IstioDetectionConfiguration(MeshUtils utils,
-				ConfigurableEnvironment environment) {
+		                                   ConfigurableEnvironment environment) {
 			this.utils = utils;
 			this.environment = environment;
 		}
@@ -70,31 +75,34 @@ public class IstioBootstrapConfiguration {
 			addIstioProfile(this.environment);
 		}
 
+		/**
+		 * 检查 Istio 是否开启，如果开启，则将 Istio 配置文件添加到环境中
+		 *
+		 * @param environment
+		 */
 		void addIstioProfile(ConfigurableEnvironment environment) {
 			if (this.utils.isIstioEnabled()) {
 				if (hasIstioProfile(environment)) {
 					if (LOG.isDebugEnabled()) {
 						LOG.debug("'istio' already in list of active profiles");
 					}
-				}
-				else {
+				} else {
 					if (LOG.isDebugEnabled()) {
 						LOG.debug("Adding 'istio' to list of active profiles");
 					}
 					environment.addActiveProfile(ISTIO_PROFILE);
 				}
-			}
-			else {
+			} else {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug(
-							"Not running inside kubernetes with istio enabled. Skipping 'istio' profile activation.");
+						"Not running inside kubernetes with istio enabled. Skipping 'istio' profile activation.");
 				}
 			}
 		}
 
 		private boolean hasIstioProfile(Environment environment) {
 			return Arrays.stream(environment.getActiveProfiles())
-					.anyMatch(ISTIO_PROFILE::equalsIgnoreCase);
+			             .anyMatch(ISTIO_PROFILE::equalsIgnoreCase);
 		}
 
 	}

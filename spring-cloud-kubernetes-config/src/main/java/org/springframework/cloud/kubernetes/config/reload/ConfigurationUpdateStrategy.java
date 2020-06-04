@@ -41,6 +41,9 @@ public class ConfigurationUpdateStrategy {
 		return this.name;
 	}
 
+	/**
+	 * 执行重新加载
+	 */
 	public void reload() {
 		this.reloadProcedure.run();
 	}

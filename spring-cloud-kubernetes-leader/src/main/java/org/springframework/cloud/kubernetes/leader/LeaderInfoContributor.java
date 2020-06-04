@@ -16,13 +16,13 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import org.springframework.boot.actuate.info.Info.Builder;
 import org.springframework.boot.actuate.info.InfoContributor;
 import org.springframework.integration.leader.Candidate;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class LeaderInfoContributor implements InfoContributor {
 
@@ -31,7 +31,7 @@ public class LeaderInfoContributor implements InfoContributor {
 	private final Candidate candidate;
 
 	public LeaderInfoContributor(LeadershipController leadershipController,
-			Candidate candidate) {
+	                             Candidate candidate) {
 		this.leadershipController = leadershipController;
 		this.candidate = candidate;
 	}
@@ -45,8 +45,7 @@ public class LeaderInfoContributor implements InfoContributor {
 			details.put("leaderId", l.getId());
 			details.put("role", l.getRole());
 			details.put("isLeader", l.isCandidate(candidate));
-		}
-		else {
+		} else {
 			details.put("leaderId", "Unknown");
 		}
 		builder.withDetail("leaderElection", details);

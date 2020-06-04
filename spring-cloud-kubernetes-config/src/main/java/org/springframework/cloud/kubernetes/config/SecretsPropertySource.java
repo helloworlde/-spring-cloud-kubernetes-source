@@ -16,18 +16,17 @@
 
 package org.springframework.cloud.kubernetes.config;
 
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.util.StringUtils;
+
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Kubernetes property source for secrets.
@@ -42,50 +41,62 @@ public class SecretsPropertySource extends MapPropertySource {
 	private static final String PREFIX = "secrets";
 
 	public SecretsPropertySource(KubernetesClient client, Environment env, String name,
-			String namespace, Map<String, String> labels) {
+	                             String namespace, Map<String, String> labels) {
 		super(getSourceName(client, env, name, namespace),
-				getSourceData(client, env, name, namespace, labels));
+			getSourceData(client, env, name, namespace, labels));
 	}
 
 	private static String getSourceName(KubernetesClient client, Environment env,
-			String name, String namespace) {
+	                                    String name, String namespace) {
 		return new StringBuilder().append(PREFIX)
-				.append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR).append(name)
-				.append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR).append(namespace)
-				.toString();
+		                          .append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR).append(name)
+		                          .append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR).append(namespace)
+		                          .toString();
 	}
 
 	private static Map<String, Object> getSourceData(KubernetesClient client,
-			Environment env, String name, String namespace, Map<String, String> labels) {
+	                                                 Environment env, String name, String namespace, Map<String, String> labels) {
 		Map<String, Object> result = new HashMap<>();
 
 		try {
 			// Read for secrets api (named)
+			// 根据名称和命名空间获取 secret
 			Secret secret;
 			if (StringUtils.isEmpty(namespace)) {
-				secret = client.secrets().withName(name).get();
+				secret = client.secrets()
+				               .withName(name)
+				               .get();
+			} else {
+				secret = client.secrets()
+				               .inNamespace(namespace)
+				               .withName(name)
+				               .get();
 			}
-			else {
-				secret = client.secrets().inNamespace(namespace).withName(name).get();
-			}
+			// 解码
 			putAll(secret, result);
 
 			// Read for secrets api (label)
+			// 根据 label 读取 Secret
 			if (!labels.isEmpty()) {
 				if (StringUtils.isEmpty(namespace)) {
-					client.secrets().withLabels(labels).list().getItems()
-							.forEach(s -> putAll(s, result));
-				}
-				else {
-					client.secrets().inNamespace(namespace).withLabels(labels).list()
-							.getItems().forEach(s -> putAll(s, result));
+					client.secrets()
+					      .withLabels(labels)
+					      .list()
+					      .getItems()
+					      .forEach(s -> putAll(s, result));
+				} else {
+					client.secrets()
+					      .inNamespace(namespace)
+					      .withLabels(labels)
+					      .list()
+					      .getItems()
+					      .forEach(s -> putAll(s, result));
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			LOG.warn("Can't read secret with name: [" + name + "] or labels [" + labels
-					+ "] in namespace:[" + namespace + "] (cause: " + e.getMessage()
-					+ "). Ignoring");
+				+ "] in namespace:[" + namespace + "] (cause: " + e.getMessage()
+				+ "). Ignoring");
 		}
 
 		return result;
@@ -94,10 +105,17 @@ public class SecretsPropertySource extends MapPropertySource {
 	// *****************************
 	// Helpers
 	// *****************************
+
+	/**
+	 * k-v 通过 Base64 解码后放入 Map 中
+	 *
+	 * @param secret
+	 * @param result
+	 */
 	private static void putAll(Secret secret, Map<String, Object> result) {
 		if (secret != null && secret.getData() != null) {
-			secret.getData().forEach((k, v) -> result.put(k,
-					new String(Base64.getDecoder().decode(v)).trim()));
+			secret.getData()
+			      .forEach((k, v) -> result.put(k, new String(Base64.getDecoder().decode(v)).trim()));
 		}
 	}
 

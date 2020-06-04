@@ -16,14 +16,13 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.SmartLifecycle;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.context.SmartLifecycle;
 
 /**
  * @author Gytis Trikleris
@@ -45,8 +44,8 @@ public class LeaderInitiator implements SmartLifecycle {
 	private boolean isRunning;
 
 	public LeaderInitiator(LeaderProperties leaderProperties,
-			LeadershipController leadershipController,
-			LeaderRecordWatcher leaderRecordWatcher, PodReadinessWatcher hostPodWatcher) {
+	                       LeadershipController leadershipController,
+	                       LeaderRecordWatcher leaderRecordWatcher, PodReadinessWatcher hostPodWatcher) {
 		this.leaderProperties = leaderProperties;
 		this.leadershipController = leadershipController;
 		this.leaderRecordWatcher = leaderRecordWatcher;
@@ -66,10 +65,10 @@ public class LeaderInitiator implements SmartLifecycle {
 			this.hostPodWatcher.start();
 			this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 			this.scheduledExecutorService.scheduleAtFixedRate(
-					this.leadershipController::update,
-					this.leaderProperties.getUpdatePeriod().toMillis(),
-					this.leaderProperties.getUpdatePeriod().toMillis(),
-					TimeUnit.MILLISECONDS);
+				this.leadershipController::update,
+				this.leaderProperties.getUpdatePeriod().toMillis(),
+				this.leaderProperties.getUpdatePeriod().toMillis(),
+				TimeUnit.MILLISECONDS);
 			this.isRunning = true;
 		}
 	}

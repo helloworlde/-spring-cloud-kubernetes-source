@@ -314,11 +314,10 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 		if (spelExpression == null || spelExpression.isEmpty()) {
 			filteredServices = (Service instance) -> true;
 		} else {
-			// 表达式部位可能够， 则解析并过滤
+			// 表达式不为空， 则解析并过滤
 			Expression filterExpr = this.parser.parseExpression(spelExpression);
 			filteredServices = (Service instance) -> {
 				Boolean include = filterExpr.getValue(this.evalCtxt, instance, Boolean.class);
-
 				if (include == null) {
 					return false;
 				}

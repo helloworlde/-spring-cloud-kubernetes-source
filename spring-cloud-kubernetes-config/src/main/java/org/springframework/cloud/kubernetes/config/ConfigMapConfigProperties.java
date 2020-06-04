@@ -16,15 +16,16 @@
 
 package org.springframework.cloud.kubernetes.config;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.StringUtils;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.util.StringUtils;
-
 /**
+ * ConfigMap 配置属性
  * Config map configuration properties.
  *
  * @author Ioannis Canellos
@@ -65,10 +66,12 @@ public class ConfigMapConfigProperties extends AbstractConfigProperties {
 	}
 
 	/**
+	 * 如果用户没有指定 Source，则返回一个根据命名空间和名称构建的默认的Source
+	 *
 	 * @return A list of Source to use If the user has not specified any Source
 	 * properties, then a single Source is constructed based on the supplied name and
 	 * namespace
-	 *
+	 * <p>
 	 * These are the actual name/namespace pairs that are used to create a
 	 * ConfigMapPropertySource
 	 */
@@ -77,13 +80,14 @@ public class ConfigMapConfigProperties extends AbstractConfigProperties {
 			return new ArrayList<NormalizedSource>() {
 				{
 					add(new NormalizedSource(ConfigMapConfigProperties.this.name,
-							ConfigMapConfigProperties.this.namespace));
+						ConfigMapConfigProperties.this.namespace));
 				}
 			};
 		}
 
-		return this.sources.stream().map(s -> s.normalize(this.name, this.namespace))
-				.collect(Collectors.toList());
+		return this.sources.stream()
+		                   .map(s -> s.normalize(this.name, this.namespace))
+		                   .collect(Collectors.toList());
 	}
 
 	@Override
@@ -136,9 +140,9 @@ public class ConfigMapConfigProperties extends AbstractConfigProperties {
 
 		public NormalizedSource normalize(String defaultName, String defaultNamespace) {
 			final String normalizedName = StringUtils.isEmpty(this.name) ? defaultName
-					: this.name;
+				: this.name;
 			final String normalizedNamespace = StringUtils.isEmpty(this.namespace)
-					? defaultNamespace : this.namespace;
+				? defaultNamespace : this.namespace;
 
 			return new NormalizedSource(normalizedName, normalizedNamespace);
 		}

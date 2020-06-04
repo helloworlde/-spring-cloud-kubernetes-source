@@ -16,26 +16,25 @@
 
 package org.springframework.cloud.kubernetes.config.reload;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
-
 import org.springframework.cloud.kubernetes.config.ConfigMapPropertySource;
 import org.springframework.cloud.kubernetes.config.ConfigMapPropertySourceLocator;
 import org.springframework.cloud.kubernetes.config.SecretsPropertySource;
 import org.springframework.cloud.kubernetes.config.SecretsPropertySourceLocator;
 import org.springframework.core.env.AbstractEnvironment;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
+ * 通过事件监听配置变化，并重新加载属性
  * A change detector that subscribes to changes in secrets and configmaps and fire a
  * reload when something changes.
  *
@@ -51,10 +50,10 @@ public class EventBasedConfigurationChangeDetector extends ConfigurationChangeDe
 	private Map<String, Watch> watches;
 
 	public EventBasedConfigurationChangeDetector(AbstractEnvironment environment,
-			ConfigReloadProperties properties, KubernetesClient kubernetesClient,
-			ConfigurationUpdateStrategy strategy,
-			ConfigMapPropertySourceLocator configMapPropertySourceLocator,
-			SecretsPropertySourceLocator secretsPropertySourceLocator) {
+	                                             ConfigReloadProperties properties, KubernetesClient kubernetesClient,
+	                                             ConfigurationUpdateStrategy strategy,
+	                                             ConfigMapPropertySourceLocator configMapPropertySourceLocator,
+	                                             SecretsPropertySourceLocator secretsPropertySourceLocator) {
 		super(environment, properties, kubernetesClient, strategy);
 
 		this.configMapPropertySourceLocator = configMapPropertySourceLocator;
@@ -66,59 +65,60 @@ public class EventBasedConfigurationChangeDetector extends ConfigurationChangeDe
 	public void watch() {
 		boolean activated = false;
 
+		// 如果监控 ConfigMap
 		if (this.properties.isMonitoringConfigMaps()) {
 			try {
 				String name = "config-maps-watch";
+				// Watch 是通过 WebSocket 实现的
 				this.watches.put(name, this.kubernetesClient.configMaps()
-						.watch(new Watcher<ConfigMap>() {
-							@Override
-							public void eventReceived(Action action,
-									ConfigMap configMap) {
-								onEvent(configMap);
-							}
+				                                            .watch(new Watcher<ConfigMap>() {
+					                                            @Override
+					                                            public void eventReceived(Action action,
+					                                                                      ConfigMap configMap) {
+						                                            onEvent(configMap);
+					                                            }
 
-							@Override
-							public void onClose(KubernetesClientException e) {
-							}
-						}));
+					                                            @Override
+					                                            public void onClose(KubernetesClientException e) {
+					                                            }
+				                                            }));
 				activated = true;
 				this.log.info("Added new Kubernetes watch: " + name);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				this.log.error(
-						"Error while establishing a connection to watch config maps: configuration may remain stale",
-						e);
+					"Error while establishing a connection to watch config maps: configuration may remain stale",
+					e);
 			}
 		}
 
+		// 如果监控 Secret
 		if (this.properties.isMonitoringSecrets()) {
 			try {
 				activated = false;
 				String name = "secrets-watch";
 				this.watches.put(name,
-						this.kubernetesClient.secrets().watch(new Watcher<Secret>() {
-							@Override
-							public void eventReceived(Action action, Secret secret) {
-								onEvent(secret);
-							}
+					this.kubernetesClient.secrets().watch(new Watcher<Secret>() {
+						@Override
+						public void eventReceived(Action action, Secret secret) {
+							onEvent(secret);
+						}
 
-							@Override
-							public void onClose(KubernetesClientException e) {
-							}
-						}));
+						@Override
+						public void onClose(KubernetesClientException e) {
+						}
+					}));
 				activated = true;
 				this.log.info("Added new Kubernetes watch: " + name);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				this.log.error(
-						"Error while establishing a connection to watch secrets: configuration may remain stale",
-						e);
+					"Error while establishing a connection to watch secrets: configuration may remain stale",
+					e);
 			}
 		}
 
 		if (activated) {
 			this.log.info(
-					"Kubernetes event-based configuration change detector activated");
+				"Kubernetes event-based configuration change detector activated");
 		}
 	}
 
@@ -130,8 +130,7 @@ public class EventBasedConfigurationChangeDetector extends ConfigurationChangeDe
 					this.log.debug("Closing the watch " + entry.getKey());
 					entry.getValue().close();
 
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					this.log.error("Error while closing the watch connection", e);
 				}
 			}
@@ -139,10 +138,12 @@ public class EventBasedConfigurationChangeDetector extends ConfigurationChangeDe
 	}
 
 	private void onEvent(ConfigMap configMap) {
+		// 加载配置，检测是否变化
 		boolean changed = changed(
-				locateMapPropertySources(this.configMapPropertySourceLocator,
-						this.environment),
-				findPropertySources(ConfigMapPropertySource.class));
+			locateMapPropertySources(this.configMapPropertySourceLocator, this.environment),
+			findPropertySources(ConfigMapPropertySource.class)
+		);
+		// 如果变化了，则重新加载属性
 		if (changed) {
 			this.log.info("Detected change in config maps");
 			reloadProperties();
@@ -151,9 +152,8 @@ public class EventBasedConfigurationChangeDetector extends ConfigurationChangeDe
 
 	private void onEvent(Secret secret) {
 		boolean changed = changed(
-				locateMapPropertySources(this.secretsPropertySourceLocator,
-						this.environment),
-				findPropertySources(SecretsPropertySource.class));
+			locateMapPropertySources(this.secretsPropertySourceLocator, this.environment),
+			findPropertySources(SecretsPropertySource.class));
 		if (changed) {
 			this.log.info("Detected change in secrets");
 			reloadProperties();

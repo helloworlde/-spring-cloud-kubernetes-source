@@ -16,9 +16,9 @@
 
 package org.springframework.cloud.kubernetes.leader;
 
-import java.util.Objects;
-
 import org.springframework.integration.leader.Candidate;
+
+import java.util.Objects;
 
 /**
  * @author Gytis Trikleris
@@ -48,7 +48,7 @@ public class Leader {
 		}
 
 		return Objects.equals(this.role, candidate.getRole())
-				&& Objects.equals(this.id, candidate.getId());
+			&& Objects.equals(this.id, candidate.getId());
 	}
 
 	@Override
@@ -64,7 +64,7 @@ public class Leader {
 		Leader leader = (Leader) o;
 
 		return Objects.equals(this.role, leader.role)
-				&& Objects.equals(this.id, leader.id);
+			&& Objects.equals(this.id, leader.id);
 	}
 
 	@Override

@@ -16,11 +16,12 @@
 
 package org.springframework.cloud.kubernetes.config.reload;
 
-import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+
 /**
+ * reload 配置属性
  * General configuration for the configuration reload.
  *
  * @author Nicola Ferraro
@@ -128,22 +129,27 @@ public class ConfigReloadProperties {
 	}
 
 	/**
+	 * 重新加载策略
 	 * Reload strategies.
 	 */
 	public enum ReloadStrategy {
 
 		/**
+		 * 更新 @ConfigurationProperties 或 @RefreshScope 修饰的 Bean
 		 * Fire a refresh of beans annotated with @ConfigurationProperties
 		 * or @RefreshScope.
 		 */
 		REFRESH,
 
 		/**
+		 * 当配置更新时重新启动应用
 		 * Restarts the Spring ApplicationContext to apply the new configuration.
 		 */
 		RESTART_CONTEXT,
 
 		/**
+		 * 在容器中关闭应用，并重新启动一个，需要确定非 daemon 线程绑定在应用上下文中，并有相应的
+		 * 重启策略
 		 * Shuts down the Spring ApplicationContext to activate a restart of the
 		 * container. Make sure that the lifecycle of all non-daemon threads is bound to
 		 * the ApplicationContext and that a replication controller or replica set is
@@ -154,17 +160,20 @@ public class ConfigReloadProperties {
 	}
 
 	/**
+	 * 重新加载探测模式
 	 * Reload detection modes.
 	 */
 	public enum ReloadDetectionMode {
 
 		/**
+		 * 启动一个拉取任务，定时拉取属性并重新加载
 		 * Enables a polling task that retrieves periodically all external properties and
 		 * fire a reload when they change.
 		 */
 		POLLING,
 
 		/**
+		 * 监听 Kubernetes 的事件并检查是否需要重新加载
 		 * Listens to Kubernetes events and checks if a reload is needed when configmaps
 		 * or secrets change.
 		 */

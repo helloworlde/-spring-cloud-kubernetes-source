@@ -16,6 +16,12 @@
 
 package org.springframework.cloud.kubernetes.config;
 
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.StringUtils;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
@@ -24,15 +30,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.util.StringUtils;
-
-import static org.springframework.beans.factory.config.YamlProcessor.MatchStatus.ABSTAIN;
-import static org.springframework.beans.factory.config.YamlProcessor.MatchStatus.FOUND;
-import static org.springframework.beans.factory.config.YamlProcessor.MatchStatus.NOT_FOUND;
+import static org.springframework.beans.factory.config.YamlProcessor.MatchStatus.*;
 
 /**
  * Utility class to work with property sources.
@@ -42,24 +40,42 @@ import static org.springframework.beans.factory.config.YamlProcessor.MatchStatus
  */
 public final class PropertySourceUtils {
 
+	/**
+	 * key-value 转为 properties
+	 */
 	static final Function<String, Properties> KEY_VALUE_TO_PROPERTIES = s -> {
 		Properties properties = new Properties();
 		try {
 			properties.load(new ByteArrayInputStream(s.getBytes()));
 			return properties;
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			throw new IllegalArgumentException();
 		}
 	};
-	static final Function<Properties, Map<String, Object>> PROPERTIES_TO_MAP = p -> p
-			.entrySet().stream().collect(Collectors.toMap(e -> String.valueOf(e.getKey()),
-					Map.Entry::getValue, throwingMerger(), java.util.LinkedHashMap::new));
+
+	/**
+	 * 将 properties 转为 map
+	 */
+	static final Function<Properties, Map<String, Object>> PROPERTIES_TO_MAP = p -> p.entrySet()
+	                                                                                 .stream()
+	                                                                                 .collect(
+		                                                                                 Collectors.toMap(
+			                                                                                 e -> String.valueOf(e.getKey()),
+			                                                                                 Map.Entry::getValue,
+			                                                                                 throwingMerger(),
+			                                                                                 java.util.LinkedHashMap::new)
+	                                                                                 );
 
 	private PropertySourceUtils() {
 		throw new IllegalStateException("Can't instantiate a utility class");
 	}
 
+	/**
+	 * 解析 yaml
+	 *
+	 * @param environment
+	 * @return
+	 */
 	static Function<String, Properties> yamlParserGenerator(Environment environment) {
 		return s -> {
 			YamlPropertiesFactoryBean yamlFactory = new YamlPropertiesFactoryBean();
@@ -67,9 +83,8 @@ public final class PropertySourceUtils {
 				String profiles = properties.getProperty("spring.profiles");
 				if (environment != null && StringUtils.hasText(profiles)) {
 					return environment.acceptsProfiles(Profiles.of(profiles)) ? FOUND
-							: NOT_FOUND;
-				}
-				else {
+						: NOT_FOUND;
+				} else {
 					return ABSTAIN;
 				}
 			});
@@ -78,6 +93,9 @@ public final class PropertySourceUtils {
 		};
 	}
 
+	/**
+	 * 当 key 重复时抛出异常
+	 */
 	static <T> BinaryOperator<T> throwingMerger() {
 		return (u, v) -> {
 			throw new IllegalStateException(String.format("Duplicate key %s", u));

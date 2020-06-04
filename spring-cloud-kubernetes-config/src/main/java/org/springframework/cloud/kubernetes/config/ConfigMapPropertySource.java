@@ -16,26 +16,22 @@
 
 package org.springframework.cloud.kubernetes.config;
 
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.util.StringUtils;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.StandardEnvironment;
-import org.springframework.util.StringUtils;
-
-import static org.springframework.cloud.kubernetes.config.PropertySourceUtils.KEY_VALUE_TO_PROPERTIES;
-import static org.springframework.cloud.kubernetes.config.PropertySourceUtils.PROPERTIES_TO_MAP;
-import static org.springframework.cloud.kubernetes.config.PropertySourceUtils.throwingMerger;
-import static org.springframework.cloud.kubernetes.config.PropertySourceUtils.yamlParserGenerator;
+import static org.springframework.cloud.kubernetes.config.PropertySourceUtils.*;
 
 /**
  * A {@link MapPropertySource} that uses Kubernetes config maps.
@@ -61,58 +57,68 @@ public class ConfigMapPropertySource extends MapPropertySource {
 	}
 
 	public ConfigMapPropertySource(KubernetesClient client, String name, String namespace,
-			String[] profiles) {
+	                               String[] profiles) {
 		this(client, name, namespace, createEnvironmentWithActiveProfiles(profiles));
 	}
 
-	private static Environment createEnvironmentWithActiveProfiles(
-			String[] activeProfiles) {
+	private static Environment createEnvironmentWithActiveProfiles(String[] activeProfiles) {
 		StandardEnvironment environment = new StandardEnvironment();
 		environment.setActiveProfiles(activeProfiles);
 		return environment;
 	}
 
 	public ConfigMapPropertySource(KubernetesClient client, String name, String namespace,
-			Environment environment) {
+	                               Environment environment) {
 		super(getName(client, name, namespace),
-				asObjectMap(getData(client, name, namespace, environment)));
+			asObjectMap(getData(client, name, namespace, environment)));
 	}
 
+	/**
+	 * 拼接名称
+	 *
+	 * @param client
+	 * @param name
+	 * @param namespace
+	 * @return
+	 */
 	private static String getName(KubernetesClient client, String name,
-			String namespace) {
+	                              String namespace) {
 		return new StringBuilder().append(PREFIX)
-				.append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR).append(name)
-				.append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR)
-				.append(namespace == null || namespace.isEmpty() ? client.getNamespace()
-						: namespace)
-				.toString();
+		                          .append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR)
+		                          .append(name)
+		                          .append(Constants.PROPERTY_SOURCE_NAME_SEPARATOR)
+		                          .append(namespace == null || namespace.isEmpty() ? client.getNamespace() : namespace)
+		                          .toString();
 	}
 
 	private static Map<String, Object> getData(KubernetesClient client, String name,
-			String namespace, Environment environment) {
+	                                           String namespace, Environment environment) {
 		try {
 			Map<String, Object> result = new LinkedHashMap<>();
+			// 获取 ConfigMap
 			ConfigMap map = StringUtils.isEmpty(namespace)
-					? client.configMaps().withName(name).get()
-					: client.configMaps().inNamespace(namespace).withName(name).get();
+				? client.configMaps().withName(name).get()
+				: client.configMaps().inNamespace(namespace).withName(name).get();
 
+			// 添加到map 中
 			if (map != null) {
 				result.putAll(processAllEntries(map.getData(), environment));
 			}
 
 			if (environment != null) {
+				// 根据 Profile 加载 ConfigMap
 				for (String activeProfile : environment.getActiveProfiles()) {
 
 					String mapNameWithProfile = name + "-" + activeProfile;
 
 					ConfigMap mapWithProfile = StringUtils.isEmpty(namespace)
-							? client.configMaps().withName(mapNameWithProfile).get()
-							: client.configMaps().inNamespace(namespace)
-									.withName(mapNameWithProfile).get();
+						? client.configMaps().withName(mapNameWithProfile).get()
+						: client.configMaps().inNamespace(namespace)
+						        .withName(mapNameWithProfile).get();
 
 					if (mapWithProfile != null) {
 						result.putAll(
-								processAllEntries(mapWithProfile.getData(), environment));
+							processAllEntries(mapWithProfile.getData(), environment));
 					}
 
 				}
@@ -120,17 +126,23 @@ public class ConfigMapPropertySource extends MapPropertySource {
 
 			return result;
 
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			LOG.warn("Can't read configMap with name: [" + name + "] in namespace:["
-					+ namespace + "]. Ignoring.", e);
+				+ namespace + "]. Ignoring.", e);
 		}
 
 		return new LinkedHashMap<>();
 	}
 
+	/**
+	 * 处理属性
+	 *
+	 * @param input
+	 * @param environment
+	 * @return
+	 */
 	private static Map<String, Object> processAllEntries(Map<String, String> input,
-			Environment environment) {
+	                                                     Environment environment) {
 
 		Set<Entry<String, String>> entrySet = input.entrySet();
 		if (entrySet.size() == 1) {
@@ -139,25 +151,24 @@ public class ConfigMapPropertySource extends MapPropertySource {
 			Entry<String, String> singleEntry = entrySet.iterator().next();
 			String propertyName = singleEntry.getKey();
 			String propertyValue = singleEntry.getValue();
+
 			if (propertyName.endsWith(".yml") || propertyName.endsWith(".yaml")) {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("The single property with name: [" + propertyName
-							+ "] will be treated as a yaml file");
+						+ "] will be treated as a yaml file");
 				}
 
 				return yamlParserGenerator(environment).andThen(PROPERTIES_TO_MAP)
-						.apply(propertyValue);
-			}
-			else if (propertyName.endsWith(".properties")) {
+				                                       .apply(propertyValue);
+			} else if (propertyName.endsWith(".properties")) {
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("The single property with name: [" + propertyName
-							+ "] will be treated as a properties file");
+						+ "] will be treated as a properties file");
 				}
 
 				return KEY_VALUE_TO_PROPERTIES.andThen(PROPERTIES_TO_MAP)
-						.apply(propertyValue);
-			}
-			else {
+				                              .apply(propertyValue);
+			} else {
 				return defaultProcessAllEntries(input, environment);
 			}
 		}
@@ -166,24 +177,23 @@ public class ConfigMapPropertySource extends MapPropertySource {
 	}
 
 	private static Map<String, Object> defaultProcessAllEntries(Map<String, String> input,
-			Environment environment) {
+	                                                            Environment environment) {
 
 		return input.entrySet().stream()
-				.map(e -> extractProperties(e.getKey(), e.getValue(), environment))
-				.filter(m -> !m.isEmpty()).flatMap(m -> m.entrySet().stream())
-				.collect(Collectors.toMap(Entry::getKey, Entry::getValue,
-						throwingMerger(), LinkedHashMap::new));
+		            .map(e -> extractProperties(e.getKey(), e.getValue(), environment))
+		            .filter(m -> !m.isEmpty()).flatMap(m -> m.entrySet().stream())
+		            .collect(Collectors.toMap(Entry::getKey, Entry::getValue,
+			            throwingMerger(), LinkedHashMap::new));
 	}
 
 	private static Map<String, Object> extractProperties(String resourceName,
-			String content, Environment environment) {
+	                                                     String content, Environment environment) {
 
 		if (resourceName.equals(APPLICATION_YAML)
-				|| resourceName.equals(APPLICATION_YML)) {
+			|| resourceName.equals(APPLICATION_YML)) {
 			return yamlParserGenerator(environment).andThen(PROPERTIES_TO_MAP)
-					.apply(content);
-		}
-		else if (resourceName.equals(APPLICATION_PROPERTIES)) {
+			                                       .apply(content);
+		} else if (resourceName.equals(APPLICATION_PROPERTIES)) {
 			return KEY_VALUE_TO_PROPERTIES.andThen(PROPERTIES_TO_MAP).apply(content);
 		}
 
@@ -196,7 +206,7 @@ public class ConfigMapPropertySource extends MapPropertySource {
 
 	private static Map<String, Object> asObjectMap(Map<String, Object> source) {
 		return source.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
-				Map.Entry::getValue, throwingMerger(), LinkedHashMap::new));
+			Map.Entry::getValue, throwingMerger(), LinkedHashMap::new));
 	}
 
 }

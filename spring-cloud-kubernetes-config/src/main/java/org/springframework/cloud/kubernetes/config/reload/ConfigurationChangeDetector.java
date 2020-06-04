@@ -16,27 +16,22 @@
 
 package org.springframework.cloud.kubernetes.config.reload;
 
+import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.cloud.bootstrap.config.BootstrapPropertySource;
+import org.springframework.cloud.bootstrap.config.PropertySourceLocator;
+import org.springframework.core.env.*;
+
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.annotation.PreDestroy;
-
-import io.fabric8.kubernetes.client.KubernetesClient;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.cloud.bootstrap.config.BootstrapPropertySource;
-import org.springframework.cloud.bootstrap.config.PropertySourceLocator;
-import org.springframework.core.env.CompositePropertySource;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.PropertySource;
-
 /**
+ * 监听配置变化并重新加载的 Bean 的父类
  * This is the superclass of all beans that can listen to changes in the configuration and
  * fire a reload.
  *
@@ -55,8 +50,9 @@ public abstract class ConfigurationChangeDetector {
 	protected ConfigurationUpdateStrategy strategy;
 
 	public ConfigurationChangeDetector(ConfigurableEnvironment environment,
-			ConfigReloadProperties properties, KubernetesClient kubernetesClient,
-			ConfigurationUpdateStrategy strategy) {
+	                                   ConfigReloadProperties properties,
+	                                   KubernetesClient kubernetesClient,
+	                                   ConfigurationUpdateStrategy strategy) {
 		this.environment = environment;
 		this.properties = properties;
 		this.kubernetesClient = kubernetesClient;
@@ -70,13 +66,18 @@ public abstract class ConfigurationChangeDetector {
 		this.kubernetesClient.close();
 	}
 
+	/**
+	 * 重新加载配置
+	 */
 	public void reloadProperties() {
 		this.log.info("Reloading using strategy: " + this.strategy.getName());
 		this.strategy.reload();
 	}
 
 	/**
+	 * 检测是否属性发生了变化
 	 * Determines if two property sources are different.
+	 *
 	 * @param mp1 map property sources 1
 	 * @param mp2 map property sources 2
 	 * @return {@code true} if source has changed
@@ -95,12 +96,19 @@ public abstract class ConfigurationChangeDetector {
 		return s1 == null ? s2 != null : !s1.equals(s2);
 	}
 
+	/**
+	 * 检测属性列表是否发生变化
+	 *
+	 * @param l1
+	 * @param l2
+	 * @return
+	 */
 	protected boolean changed(List<? extends MapPropertySource> l1,
-			List<? extends MapPropertySource> l2) {
+	                          List<? extends MapPropertySource> l2) {
 
 		if (l1.size() != l2.size()) {
 			this.log.warn("The current number of Confimap PropertySources does not match "
-					+ "the ones loaded from the Kubernetes - No reload will take place");
+				+ "the ones loaded from the Kubernetes - No reload will take place");
 			return false;
 		}
 
@@ -113,9 +121,11 @@ public abstract class ConfigurationChangeDetector {
 	}
 
 	/**
+	 * 根据所给的类查找其属性，当有多个属性时，提示警告
 	 * Finds one registered property source of the given type, logging a warning if
 	 * multiple property sources of that type are available.
-	 * @param <S> property source type
+	 *
+	 * @param <S>         property source type
 	 * @param sourceClass class for which property sources will be searched for
 	 * @return matched property source
 	 */
@@ -131,28 +141,24 @@ public abstract class ConfigurationChangeDetector {
 	}
 
 	/**
-	 * @param <S> property source type
+	 * @param <S>         property source type
 	 * @param sourceClass class for which property sources will be found
 	 * @return finds all registered property sources of the given type
 	 */
-	protected <S extends PropertySource<?>> List<S> findPropertySources(
-			Class<S> sourceClass) {
+	protected <S extends PropertySource<?>> List<S> findPropertySources(Class<S> sourceClass) {
 		List<S> managedSources = new LinkedList<>();
 
-		LinkedList<PropertySource<?>> sources = toLinkedList(
-				this.environment.getPropertySources());
+		LinkedList<PropertySource<?>> sources = toLinkedList(this.environment.getPropertySources());
+
 		while (!sources.isEmpty()) {
 			PropertySource<?> source = sources.pop();
 			if (source instanceof CompositePropertySource) {
 				CompositePropertySource comp = (CompositePropertySource) source;
 				sources.addAll(comp.getPropertySources());
-			}
-			else if (sourceClass.isInstance(source)) {
+			} else if (sourceClass.isInstance(source)) {
 				managedSources.add(sourceClass.cast(source));
-			}
-			else if (BootstrapPropertySource.class.isInstance(source)) {
-				PropertySource propertySource = ((BootstrapPropertySource) source)
-						.getDelegate();
+			} else if (BootstrapPropertySource.class.isInstance(source)) {
+				PropertySource propertySource = ((BootstrapPropertySource) source).getDelegate();
 				if (sourceClass.isInstance(propertySource)) {
 					sources.add(propertySource);
 				}
@@ -171,29 +177,31 @@ public abstract class ConfigurationChangeDetector {
 	}
 
 	/**
+	 * 根据所给的 Locator 返回相应的 MapPropertySource 列表
 	 * Returns a list of MapPropertySource that correspond to the current state of the
 	 * system. This only handles the PropertySource objects that are returned.
+	 *
 	 * @param propertySourceLocator Spring's property source locator
-	 * @param environment Spring environment
+	 * @param environment           Spring environment
 	 * @return a list of MapPropertySource that correspond to the current state of the
 	 * system
 	 */
-	protected List<MapPropertySource> locateMapPropertySources(
-			PropertySourceLocator propertySourceLocator, Environment environment) {
+	protected List<MapPropertySource> locateMapPropertySources(PropertySourceLocator propertySourceLocator, Environment environment) {
 
 		List<MapPropertySource> result = new ArrayList<>();
 		PropertySource propertySource = propertySourceLocator.locate(environment);
+
 		if (propertySource instanceof MapPropertySource) {
 			result.add((MapPropertySource) propertySource);
-		}
-		else if (propertySource instanceof CompositePropertySource) {
+		} else if (propertySource instanceof CompositePropertySource) {
 			result.addAll(((CompositePropertySource) propertySource).getPropertySources()
-					.stream().filter(p -> p instanceof MapPropertySource)
-					.map(p -> (MapPropertySource) p).collect(Collectors.toList()));
-		}
-		else {
+			                                                        .stream()
+			                                                        .filter(p -> p instanceof MapPropertySource)
+			                                                        .map(p -> (MapPropertySource) p)
+			                                                        .collect(Collectors.toList()));
+		} else {
 			this.log.debug("Found property source that cannot be handled: "
-					+ propertySource.getClass());
+				+ propertySource.getClass());
 		}
 
 		return result;

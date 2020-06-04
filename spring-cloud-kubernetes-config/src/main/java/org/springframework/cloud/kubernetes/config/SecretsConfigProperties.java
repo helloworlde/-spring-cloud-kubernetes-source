@@ -16,17 +16,14 @@
 
 package org.springframework.cloud.kubernetes.config;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.StringUtils;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 /**
+ * Secret 配置属性
  * Properties for configuring Kubernetes secrets.
  *
  * @author l burgazzoli
@@ -83,10 +80,12 @@ public class SecretsConfigProperties extends AbstractConfigProperties {
 	}
 
 	/**
+	 * 如果用户没有指定 Source，则根据命名空间，名称，标签构建一个
+	 *
 	 * @return A list of Source to use If the user has not specified any Source
 	 * properties, then a single Source is constructed based on the supplied name and
 	 * namespace
-	 *
+	 * <p>
 	 * These are the actual name/namespace pairs that are used to create a
 	 * SecretsPropertySource
 	 */
@@ -95,16 +94,16 @@ public class SecretsConfigProperties extends AbstractConfigProperties {
 			return new ArrayList<SecretsConfigProperties.NormalizedSource>() {
 				{
 					add(new SecretsConfigProperties.NormalizedSource(
-							SecretsConfigProperties.this.name,
-							SecretsConfigProperties.this.namespace,
-							SecretsConfigProperties.this.labels));
+						SecretsConfigProperties.this.name,
+						SecretsConfigProperties.this.namespace,
+						SecretsConfigProperties.this.labels));
 				}
 			};
 		}
 
 		return this.sources.stream()
-				.map(s -> s.normalize(this.name, this.namespace, this.labels))
-				.collect(Collectors.toList());
+		                   .map(s -> s.normalize(this.name, this.namespace, this.labels))
+		                   .collect(Collectors.toList());
 	}
 
 	public static class Source {
@@ -162,16 +161,16 @@ public class SecretsConfigProperties extends AbstractConfigProperties {
 		}
 
 		public SecretsConfigProperties.NormalizedSource normalize(String defaultName,
-				String defaultNamespace, Map<String, String> defaultLabels) {
+		                                                          String defaultNamespace, Map<String, String> defaultLabels) {
 			final String normalizedName = StringUtils.isEmpty(this.name) ? defaultName
-					: this.name;
+				: this.name;
 			final String normalizedNamespace = StringUtils.isEmpty(this.namespace)
-					? defaultNamespace : this.namespace;
+				? defaultNamespace : this.namespace;
 			final Map<String, String> normalizedLabels = this.labels.isEmpty()
-					? defaultLabels : this.labels;
+				? defaultLabels : this.labels;
 
 			return new SecretsConfigProperties.NormalizedSource(normalizedName,
-					normalizedNamespace, normalizedLabels);
+				normalizedNamespace, normalizedLabels);
 		}
 
 	}

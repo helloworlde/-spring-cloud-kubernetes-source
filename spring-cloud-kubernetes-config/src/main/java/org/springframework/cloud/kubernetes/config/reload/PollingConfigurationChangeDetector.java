@@ -16,14 +16,9 @@
 
 package org.springframework.cloud.kubernetes.config.reload;
 
-import java.util.List;
-
-import javax.annotation.PostConstruct;
-
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.cloud.kubernetes.config.ConfigMapPropertySource;
 import org.springframework.cloud.kubernetes.config.ConfigMapPropertySourceLocator;
 import org.springframework.cloud.kubernetes.config.SecretsPropertySource;
@@ -32,7 +27,11 @@ import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import javax.annotation.PostConstruct;
+import java.util.List;
+
 /**
+ * 长轮询实现监听配置变化并重新加载属性
  * A change detector that periodically retrieves secrets and configmaps and fire a reload
  * when something changes.
  *
@@ -48,10 +47,11 @@ public class PollingConfigurationChangeDetector extends ConfigurationChangeDetec
 	private SecretsPropertySourceLocator secretsPropertySourceLocator;
 
 	public PollingConfigurationChangeDetector(AbstractEnvironment environment,
-			ConfigReloadProperties properties, KubernetesClient kubernetesClient,
-			ConfigurationUpdateStrategy strategy,
-			ConfigMapPropertySourceLocator configMapPropertySourceLocator,
-			SecretsPropertySourceLocator secretsPropertySourceLocator) {
+	                                          ConfigReloadProperties properties,
+	                                          KubernetesClient kubernetesClient,
+	                                          ConfigurationUpdateStrategy strategy,
+	                                          ConfigMapPropertySourceLocator configMapPropertySourceLocator,
+	                                          SecretsPropertySourceLocator secretsPropertySourceLocator) {
 		super(environment, properties, kubernetesClient, strategy);
 
 		this.configMapPropertySourceLocator = configMapPropertySourceLocator;
@@ -64,33 +64,33 @@ public class PollingConfigurationChangeDetector extends ConfigurationChangeDetec
 	}
 
 	@Scheduled(initialDelayString = "${spring.cloud.kubernetes.reload.period:15000}",
-			fixedDelayString = "${spring.cloud.kubernetes.reload.period:15000}")
+		fixedDelayString = "${spring.cloud.kubernetes.reload.period:15000}")
 	public void executeCycle() {
 
 		boolean changedConfigMap = false;
+		// 监控 ConfigMap
 		if (this.properties.isMonitoringConfigMaps()) {
-			List<? extends MapPropertySource> currentConfigMapSources = findPropertySources(
-					ConfigMapPropertySource.class);
+			List<? extends MapPropertySource> currentConfigMapSources = findPropertySources(ConfigMapPropertySource.class);
 
 			if (!currentConfigMapSources.isEmpty()) {
 				changedConfigMap = changed(
-						locateMapPropertySources(this.configMapPropertySourceLocator,
-								this.environment),
-						currentConfigMapSources);
+					locateMapPropertySources(this.configMapPropertySourceLocator, this.environment),
+					currentConfigMapSources);
 			}
 		}
 
 		boolean changedSecrets = false;
+		//  监控 Secret
 		if (this.properties.isMonitoringSecrets()) {
-			List<MapPropertySource> currentSecretSources = locateMapPropertySources(
-					this.secretsPropertySourceLocator, this.environment);
+			List<MapPropertySource> currentSecretSources = locateMapPropertySources(this.secretsPropertySourceLocator, this.environment);
+
 			if (currentSecretSources != null && !currentSecretSources.isEmpty()) {
-				List<SecretsPropertySource> propertySources = findPropertySources(
-						SecretsPropertySource.class);
+				List<SecretsPropertySource> propertySources = findPropertySources(SecretsPropertySource.class);
 				changedSecrets = changed(currentSecretSources, propertySources);
 			}
 		}
 
+		// 当发生变化时，更新属性
 		if (changedConfigMap || changedSecrets) {
 			reloadProperties();
 		}

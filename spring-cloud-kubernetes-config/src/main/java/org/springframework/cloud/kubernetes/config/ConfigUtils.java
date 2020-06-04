@@ -19,7 +19,6 @@ package org.springframework.cloud.kubernetes.config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
@@ -39,16 +38,25 @@ public final class ConfigUtils {
 		throw new IllegalStateException("Can't instantiate a utility class");
 	}
 
+	/**
+	 * 获取应用名称，如果 configName 为空，则使用应用名称，否则使用 configName
+	 *
+	 * @param env
+	 * @param configName
+	 * @param configurationTarget
+	 * @param <C>
+	 * @return
+	 */
 	public static <C extends AbstractConfigProperties> String getApplicationName(
-			Environment env, String configName, String configurationTarget) {
+		Environment env, String configName, String configurationTarget) {
 		String name = configName;
 		if (StringUtils.isEmpty(name)) {
 			// TODO: use relaxed binding
 			if (LOG.isDebugEnabled()) {
 				LOG.debug(configurationTarget
-						+ " name has not been set, taking it from property/env "
-						+ SPRING_APPLICATION_NAME + " (default="
-						+ FALLBACK_APPLICATION_NAME + ")");
+					+ " name has not been set, taking it from property/env "
+					+ SPRING_APPLICATION_NAME + " (default="
+					+ FALLBACK_APPLICATION_NAME + ")");
 			}
 
 			name = env.getProperty(SPRING_APPLICATION_NAME, FALLBACK_APPLICATION_NAME);
@@ -57,14 +65,24 @@ public final class ConfigUtils {
 		return name;
 	}
 
+	/**
+	 * 获取 Namespace，如果指定的 Namespace 为空，则使用 Kubernetes Client 的 Namespace，
+	 * 否则使用指定的 Namespace
+	 *
+	 * @param client
+	 * @param configNamespace
+	 * @param configurationTarget
+	 * @param <C>
+	 * @return
+	 */
 	public static <C extends AbstractConfigProperties> String getApplicationNamespace(
-			KubernetesClient client, String configNamespace, String configurationTarget) {
+		KubernetesClient client, String configNamespace, String configurationTarget) {
 		String namespace = configNamespace;
 		if (StringUtils.isEmpty(namespace)) {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug(configurationTarget
-						+ " namespace has not been set, taking it from client (ns="
-						+ client.getNamespace() + ")");
+					+ " namespace has not been set, taking it from client (ns="
+					+ client.getNamespace() + ")");
 			}
 
 			namespace = client.getNamespace();
