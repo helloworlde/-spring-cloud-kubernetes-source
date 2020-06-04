@@ -33,7 +33,8 @@ public class KubernetesServiceRegistry implements ServiceRegistry<KubernetesRegi
 	public KubernetesServiceRegistry() {
 	}
 
-	// TODO 默认不注册，怎么实现的服务发现
+	// 默认不注册，怎么实现的服务发现
+	// 不需要注册，通过 Service 名称，通过 Kubernetes 解析直接调用
 	@Override
 	public void register(KubernetesRegistration registration) {
 		log.info("Registering : " + registration);

@@ -68,7 +68,9 @@ public class KubernetesCatalogWatch implements ApplicationEventPublisherAware {
 
 			// not all pods participate in the service discovery. only those that have
 			// endpoints.
-			// 仅有 endpoint 的服务参与服务发现 TODO 什么是 endpoint
+			// 仅有 endpoint 的服务参与服务发现
+			// Endpoints 是一个资源对象，存储在Etcd中，用于记录一个 Service对应的Pod的访问地址
+
 			List<Endpoints> endpoints = this.kubernetesClient.endpoints()
 			                                                 .list()
 			                                                 .getItems();

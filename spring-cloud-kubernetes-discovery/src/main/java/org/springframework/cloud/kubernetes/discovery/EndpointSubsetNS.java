@@ -28,7 +28,27 @@ public class EndpointSubsetNS {
 
 	private String namespace;
 
-	// TODO 什么是 EndpointSubset?
+	// EndpointSubset 是一组带有端口号的地址，扩展Endpoint集是由地址和端口号构造成的坐标集
+	// {
+	// 	Addresses: [{"ip": "10.10.1.1"}, {"ip": "10.10.2.2"}],
+	// 	Ports: [{"name": "a", "port": 8675}, {"name": "b", "port": 309}]
+	// }
+	// 上面的endpoint集最终可以写成如下形式：
+	// a: [ 10.10.1.1:8675, 10.10.2.2:8675 ],
+	// b: [ 10.10.1.1:309, 10.10.2.2:309 ]
+
+	//Endpoints用来支撑service的endpoints集合，实际的请求都是要通过service分发到不同的endpoints去处理。例如：
+	// Name: "mysvc",
+	// Subsets: [
+	// {
+	// Addresses: [{"ip": "10.10.1.1"}, {"ip": "10.10.2.2"}],
+	// Ports: [{"name": "a", "port": 8675}, {"name": "b", "port": 309}]
+	// },
+	// {
+	// Addresses: [{"ip": "10.10.3.3"}],
+	// Ports: [{"name": "a", "port": 93}, {"name": "b", "port": 76}]
+	// },
+	// ]
 	private List<EndpointSubset> endpointSubset;
 
 	public EndpointSubsetNS() {
