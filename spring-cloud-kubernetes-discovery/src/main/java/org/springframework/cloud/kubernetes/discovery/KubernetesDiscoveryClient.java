@@ -269,13 +269,14 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 	public List<String> getServices() {
 		String spelExpression = this.properties.getFilter();
 		Predicate<Service> filteredServices;
+		// 根据条件过滤
 		if (spelExpression == null || spelExpression.isEmpty()) {
 			filteredServices = (Service instance) -> true;
 		} else {
+			// 解析表达式 并生成过滤条件
 			Expression filterExpr = this.parser.parseExpression(spelExpression);
 			filteredServices = (Service instance) -> {
-				Boolean include = filterExpr.getValue(this.evalCtxt, instance,
-					Boolean.class);
+				Boolean include = filterExpr.getValue(this.evalCtxt, instance, Boolean.class);
 				if (include == null) {
 					return false;
 				}
@@ -286,8 +287,12 @@ public class KubernetesDiscoveryClient implements DiscoveryClient {
 	}
 
 	public List<String> getServices(Predicate<Service> filter) {
-		return this.kubernetesClientServicesFunction.apply(this.client).list().getItems()
-		                                            .stream().filter(filter).map(s -> s.getMetadata().getName())
+		return this.kubernetesClientServicesFunction.apply(this.client)
+		                                            .list()
+		                                            .getItems()
+		                                            .stream()
+		                                            .filter(filter)
+		                                            .map(s -> s.getMetadata().getName())
 		                                            .collect(Collectors.toList());
 	}
 
