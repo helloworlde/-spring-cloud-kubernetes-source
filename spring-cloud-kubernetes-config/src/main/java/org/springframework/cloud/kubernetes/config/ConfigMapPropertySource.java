@@ -67,7 +67,9 @@ public class ConfigMapPropertySource extends MapPropertySource {
 		return environment;
 	}
 
-	public ConfigMapPropertySource(KubernetesClient client, String name, String namespace,
+	public ConfigMapPropertySource(KubernetesClient client,
+	                               String name,
+	                               String namespace,
 	                               Environment environment) {
 		super(getName(client, name, namespace),
 			asObjectMap(getData(client, name, namespace, environment)));
